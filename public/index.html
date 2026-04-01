@@ -132,6 +132,13 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .modal .btn-secondary{background:#222;color:#aaa}.modal .btn-secondary:hover{background:#333}
 .modal .btn-spotify{background:#1db954;color:#fff}.modal .btn-spotify:hover{background:#1aa34a}
 
+/* Playlist modal items */
+.modal .pl-modal-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;font-size:13px;margin-bottom:4px}
+.modal .pl-modal-item:hover{background:#2a2a2a}
+.modal .pl-modal-item .pl-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;color:#ff5500}
+.modal .pl-modal-item .pl-name{flex:1}
+.modal .pl-modal-item .pl-count{font-size:11px;color:#555}
+
 /* Thumbnail view (small art + text rows) */
 .thumb-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px}
 .thumb-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s}
@@ -284,6 +291,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <h3>Add to Playlist</h3>
     <div id="plModalList"></div>
     <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="createPlaylistAndAdd()">+ New Playlist</button>
       <button class="btn btn-secondary" onclick="closePlModal()">Cancel</button>
     </div>
   </div>
@@ -342,10 +350,13 @@ function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebarOverlay").classList.toggle("active");
 }
-function sbSelect(el){document.querySelectorAll(".sidebar .pl-item").forEach(i=>i.classList.remove("active"));if(el)el.classList.add("active")}
-function showAll(){currentPlaylistId=null;filteredTracks=allTracks;render();toggleSidebar()}
-function showUntagged(){currentPlaylistId=null;filteredTracks=allTracks.filter(t=>!t.genre);render();toggleSidebar()}
-function filterFlag(f){currentPlaylistId=null;filteredTracks=allTracks.filter(t=>(t.flags||[]).includes(f));render();toggleSidebar()}
+function sbSelect(el){
+  document.querySelectorAll(".sidebar .pl-item").forEach(i=>i.classList.remove("active"));
+  if(el){el.classList.add("active");activeSidebarId=el.dataset.sb||null}
+}
+function showAll(){currentPlaylistId=null;activeSidebarId='all';filteredTracks=allTracks;render();toggleSidebar()}
+function showUntagged(){currentPlaylistId=null;activeSidebarId='untagged';filteredTracks=allTracks.filter(t=>!t.genre);render();toggleSidebar()}
+function filterFlag(f){currentPlaylistId=null;activeSidebarId=f;filteredTracks=allTracks.filter(t=>(t.flags||[]).includes(f));render();toggleSidebar()}
 
 // Filters
 async function buildFilters(){
@@ -592,13 +603,15 @@ function seekPlayer(e){const r=document.getElementById("playerProgress").getBoun
 audioEl.addEventListener("ended",()=>{isPlaying=false;updatePlayerBtn();if(currentTrack){const i=filteredTracks.findIndex(t=>t.id===currentTrack.id);if(i>=0&&i<filteredTracks.length-1)playTrack(filteredTracks[i+1].id)}});
 
 // Playlists
+let activeSidebarId=null;
 async function loadPlaylists(){
   const res=await fetch(`${API}/playlists`);const data=await res.json();
   const el=document.getElementById("playlistsList");
-  el.innerHTML=data.playlists.map(p=>`<div class="pl-item" data-sb="pl-${p.id}" onclick="sbSelect(this);loadPlaylist('${p.id}')"><span class="pl-icon">♪</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
+  el.innerHTML=data.playlists.map(p=>`<div class="pl-item${activeSidebarId==='pl-'+p.id?' active':''}" data-sb="pl-${p.id}" onclick="sbSelect(this);loadPlaylist('${p.id}')"><span class="pl-icon">♪</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
 }
 async function loadPlaylist(pid){
   currentPlaylistId=pid;
+  activeSidebarId='pl-'+pid;
   const res=await fetch(`${API}/playlists/${pid}`);const data=await res.json();
   filteredTracks=data.tracks;render();toggleSidebar();
 }
@@ -608,7 +621,9 @@ function createPlaylist(){
 }
 function showAddToPlaylist(){
   fetch(`${API}/playlists`).then(r=>r.json()).then(data=>{
-    document.getElementById("plModalList").innerHTML=data.playlists.map(p=>`<div class="pl-item" onclick="addTrackToPlaylist('${p.id}')">${esc(p.name)}</div>`).join("")||"<p style='color:#666;font-size:13px'>No playlists yet</p>";
+    document.getElementById("plModalList").innerHTML=data.playlists.map(p=>
+      `<div class="pl-modal-item" onclick="addTrackToPlaylist('${p.id}')"><span class="pl-icon">♪</span><span class="pl-name">${esc(p.name)}</span><span class="pl-count">${p.count} tracks</span></div>`
+    ).join("")||"<p style='color:#555;font-size:13px;padding:12px'>No playlists yet — create one below</p>";
     document.getElementById("plModal").classList.add("active");
   });
 }
@@ -616,6 +631,15 @@ function closePlModal(){document.getElementById("plModal").classList.remove("act
 async function addTrackToPlaylist(pid){
   if(!currentTrack)return;
   await fetch(`${API}/playlists/${pid}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({add_track:currentTrack.id})});
+  closePlModal();loadPlaylists();
+}
+async function createPlaylistAndAdd(){
+  const name=prompt("New playlist name:");if(!name)return;
+  const res=await fetch(`${API}/playlists`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+  const pl=await res.json();
+  if(currentTrack){
+    await fetch(`${API}/playlists/${pl.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({add_track:currentTrack.id})});
+  }
   closePlModal();loadPlaylists();
 }
 
