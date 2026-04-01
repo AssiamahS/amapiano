@@ -149,13 +149,15 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 
 /* CoverFlow view */
 .coverflow-section{background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;padding:20px 0;user-select:none}
-.cf-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 calc(50% - 100px);scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.cf-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:20px 0;align-items:center;justify-content:center;min-height:260px}
 .cf-scroll::-webkit-scrollbar{height:0;display:none}
-.cf-card{flex-shrink:0;width:200px;scroll-snap-align:center;cursor:pointer;transition:transform .2s,opacity .2s;opacity:.5}
-.cf-card.active{opacity:1;transform:scale(1.08)}
-.cf-card:hover{opacity:.8}
-.cf-card img{width:200px;height:200px;object-fit:cover;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);display:block}
-.cf-card .no-art{width:200px;height:200px;display:flex;align-items:center;justify-content:center;font-size:50px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+/* Pad left/right so first/last card can center */
+.cf-scroll::before,.cf-scroll::after{content:"";flex-shrink:0;width:calc(50% - 110px)}
+.cf-card{flex-shrink:0;width:220px;scroll-snap-align:center;cursor:pointer;transition:transform .3s,opacity .3s,filter .3s;opacity:.4;filter:brightness(.6)}
+.cf-card.active{opacity:1;transform:scale(1.15);filter:brightness(1);z-index:10}
+.cf-card:hover:not(.active){opacity:.7;filter:brightness(.8)}
+.cf-card img{width:220px;height:220px;object-fit:cover;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7);display:block}
+.cf-card .no-art{width:220px;height:220px;display:flex;align-items:center;justify-content:center;font-size:50px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7)}
 .cf-slider-row{display:flex;align-items:center;gap:12px;padding:10px 24px 0}
 .cf-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#222;border-radius:2px;outline:none}
 .cf-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#ff5500;cursor:pointer;border:2px solid #333}
@@ -471,11 +473,11 @@ function cfUpdateInfo(cfTracks){
   document.getElementById("cfArtist").textContent=ct.artist;
   document.getElementById("cfAlbum").textContent=ct.album||ct.genre||"";
 
-  // Track list below
+  // Track list below - show artist tracks if multiple, otherwise show all filtered
   const artistTracks=filteredTracks.filter(t=>t.artist===ct.artist);
-  const listTracks=artistTracks.length>1?artistTracks:filteredTracks.slice(Math.max(0,filteredTracks.indexOf(ct)-10),filteredTracks.indexOf(ct)+20);
-  let h=`<div class="list-header"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
-  h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:#666">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+  const listTracks=artistTracks.length>1?artistTracks:filteredTracks;
+  let h=`<div class="list-header" style="position:sticky;top:0;background:#0a0a0a;z-index:5"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
+  h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:#666">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
   document.getElementById("cfList").innerHTML=h;
 }
 
