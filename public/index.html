@@ -440,63 +440,55 @@ function renderThumb(){
   document.getElementById("mainThumb").innerHTML=filteredTracks.map(t=>`<div class="thumb-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="info"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<div class="genre-sm">${esc(t.genre)}</div>`:""}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
 }
 
-// CoverFlow
-let cfBuilt=false;
+// CoverFlow - virtualized: only renders ~21 cards around cfIndex
+let cfBuilt=false, cfTracksCached=[];
 function renderCoverflow(){
-  const cfTracks=filteredTracks.filter(t=>t.cover);
+  cfTracksCached=filteredTracks.filter(t=>t.cover);
   const scroll=document.getElementById("cfScroll");
   const slider=document.getElementById("cfSlider");
 
-  if(!cfTracks.length){
+  if(!cfTracksCached.length){
     scroll.innerHTML="<p style='color:#555;padding:80px;text-align:center'>No cover art to display</p>";
     return;
   }
+  if(cfIndex>=cfTracksCached.length)cfIndex=cfTracksCached.length-1;
+  if(cfIndex<0)cfIndex=0;
 
-  // Build cards
-  scroll.innerHTML=cfTracks.map((t,i)=>`<div class="cf-card${i===cfIndex?" active":""}" data-idx="${i}" onclick="cfSelect(${i})" ondblclick="openTagModal('${t.id}')">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div>`).join("");
-
-  slider.max=cfTracks.length-1;
+  slider.max=cfTracksCached.length-1;
   slider.value=cfIndex;
-  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
+  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracksCached.length}`;
 
-  cfUpdateInfo(cfTracks);
-
-  // Scroll to active card
-  requestAnimationFrame(()=>{
-    const activeCard=scroll.querySelector(".cf-card.active");
-    if(activeCard)activeCard.scrollIntoView({behavior:cfBuilt?"smooth":"auto",block:"nearest",inline:"center"});
-    cfBuilt=true;
-  });
-
-  // Detect scroll-snap landing
-  let scrollTimer;
-  scroll.onscroll=()=>{
-    clearTimeout(scrollTimer);
-    scrollTimer=setTimeout(()=>{
-      // Find which card is centered
-      const scrollCenter=scroll.scrollLeft+scroll.clientWidth/2;
-      const cards=scroll.querySelectorAll(".cf-card");
-      let closest=0,minDist=Infinity;
-      cards.forEach((c,i)=>{
-        const cardCenter=c.offsetLeft-scroll.offsetLeft+100;
-        const dist=Math.abs(cardCenter-scroll.scrollLeft-scroll.clientWidth/2);
-        if(dist<minDist){minDist=dist;closest=i}
-      });
-      if(closest!==cfIndex){
-        cfIndex=closest;
-        cards.forEach((c,i)=>c.classList.toggle("active",i===cfIndex));
-        slider.value=cfIndex;
-        document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
-        cfUpdateInfo(cfTracks);
-      }
-    },100);
-  };
+  cfRenderCards();
+  cfUpdateInfo();
 }
 
-function cfUpdateInfo(cfTracks){
-  if(!cfTracks)cfTracks=filteredTracks.filter(t=>t.cover);
-  if(!cfTracks.length)return;
-  const ct=cfTracks[cfIndex];
+function cfRenderCards(){
+  const scroll=document.getElementById("cfScroll");
+  const total=cfTracksCached.length;
+  // Render window of 21 cards centered on cfIndex
+  const WINDOW=10;
+  const start=Math.max(0,cfIndex-WINDOW);
+  const end=Math.min(total-1,cfIndex+WINDOW);
+
+  let html='';
+  for(let i=start;i<=end;i++){
+    const t=cfTracksCached[i];
+    const isActive=i===cfIndex;
+    html+=`<div class="cf-card${isActive?" active":""}" data-idx="${i}" onclick="cfSelect(${i})" ondblclick="openTagModal('${t.id}')">${t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`}</div>`;
+  }
+  scroll.innerHTML=html;
+
+  // Scroll the active card to center
+  requestAnimationFrame(()=>{
+    const active=scroll.querySelector(".cf-card.active");
+    if(active)active.scrollIntoView({behavior:cfBuilt?"smooth":"instant",block:"nearest",inline:"center"});
+    cfBuilt=true;
+  });
+}
+
+function cfUpdateInfo(){
+  if(!cfTracksCached.length)return;
+  const ct=cfTracksCached[cfIndex];
   document.getElementById("cfTitle").textContent=ct.title;
   document.getElementById("cfArtist").textContent=ct.artist;
   document.getElementById("cfAlbum").textContent=ct.album||ct.genre||"";
@@ -510,37 +502,28 @@ function cfUpdateInfo(cfTracks){
 }
 
 function cfSelect(i){
-  const cfTracks=filteredTracks.filter(t=>t.cover);
   cfIndex=i;
-  const scroll=document.getElementById("cfScroll");
-  scroll.querySelectorAll(".cf-card").forEach((c,j)=>c.classList.toggle("active",j===i));
-  const card=scroll.children[i];
-  if(card)card.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   document.getElementById("cfSlider").value=i;
-  document.getElementById("cfSliderLabel").textContent=`${i+1} / ${cfTracks.length}`;
-  cfUpdateInfo(cfTracks);
-  playTrack(cfTracks[i].id);
+  document.getElementById("cfSliderLabel").textContent=`${i+1} / ${cfTracksCached.length}`;
+  cfRenderCards();
+  cfUpdateInfo();
+  if(cfTracksCached[i])playTrack(cfTracksCached[i].id);
 }
 
 function cfSliderChange(val){
   cfIndex=parseInt(val);
-  const cfTracks=filteredTracks.filter(t=>t.cover);
-  const scroll=document.getElementById("cfScroll");
-  scroll.querySelectorAll(".cf-card").forEach((c,j)=>c.classList.toggle("active",j===cfIndex));
-  const card=scroll.children[cfIndex];
-  if(card)card.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
-  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
-  cfUpdateInfo(cfTracks);
+  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracksCached.length}`;
+  cfRenderCards();
+  cfUpdateInfo();
 }
 
 // Keyboard nav for coverflow
 document.addEventListener("keydown",e=>{
   if(currentView!=="coverflow")return;
-  const cfTracks=filteredTracks.filter(t=>t.cover);
-  if(!cfTracks.length)return;
+  if(!cfTracksCached.length)return;
   if(e.key==="ArrowLeft"){cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex);e.preventDefault()}
-  if(e.key==="ArrowRight"){cfIndex=Math.min(cfTracks.length-1,cfIndex+1);cfSliderChange(cfIndex);e.preventDefault()}
-  if(e.key==="Enter"){playTrack(cfTracks[cfIndex].id)}
+  if(e.key==="ArrowRight"){cfIndex=Math.min(cfTracksCached.length-1,cfIndex+1);cfSliderChange(cfIndex);e.preventDefault()}
+  if(e.key==="Enter"&&cfTracksCached[cfIndex]){playTrack(cfTracksCached[cfIndex].id)}
 });
 
 // Horizontal scroll filter bar with mouse wheel
@@ -677,16 +660,21 @@ async function importSeratoCrate(path,name){
 
 function goToCurrentInCoverflow(){
   if(!currentTrack)return;
-  const cfTracks=filteredTracks.filter(t=>t.cover);
-  const idx=cfTracks.findIndex(t=>t.id===currentTrack.id);
-  if(idx>=0){cfIndex=idx;setView('coverflow')}
-  else{
-    // Track not in current filter, show all
-    filteredTracks=allTracks;cfIndex=0;
-    const cfAll=filteredTracks.filter(t=>t.cover);
-    const i2=cfAll.findIndex(t=>t.id===currentTrack.id);
-    if(i2>=0)cfIndex=i2;
-    setView('coverflow');
+  // If not in coverflow, switch to it
+  if(currentView!=="coverflow"){
+    // Make sure we're showing all tracks
+    if(!filteredTracks.includes(currentTrack)){
+      filteredTracks=allTracks;
+    }
+    cfBuilt=false;
+    const cfTracks=filteredTracks.filter(t=>t.cover);
+    const idx=cfTracks.findIndex(t=>t.id===currentTrack.id);
+    cfIndex=idx>=0?idx:0;
+    setView("coverflow");
+  }else{
+    // Already in coverflow, just jump
+    const idx=cfTracksCached.findIndex(t=>t.id===currentTrack.id);
+    if(idx>=0){cfIndex=idx;cfSliderChange(cfIndex)}
   }
 }
 
