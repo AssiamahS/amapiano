@@ -132,6 +132,39 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .modal .btn-secondary{background:#222;color:#aaa}.modal .btn-secondary:hover{background:#333}
 .modal .btn-spotify{background:#1db954;color:#fff}.modal .btn-spotify:hover{background:#1aa34a}
 
+/* Thumbnail view (small art + text rows) */
+.thumb-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px}
+.thumb-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s}
+.thumb-row:hover{background:#1a1a1a}
+.thumb-row.playing{background:#1f1510}
+.thumb-row .art{width:48px;height:48px;border-radius:5px;overflow:hidden;background:#1a1a1a;flex-shrink:0;position:relative}
+.thumb-row .art img{width:100%;height:100%;object-fit:cover}
+.thumb-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;color:#333}
+.thumb-row .info{flex:1;min-width:0}
+.thumb-row .info .title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb-row .info .artist{font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb-row .info .genre-sm{font-size:9px;color:#555}
+.thumb-row .duration{font-size:10px;color:#555;font-family:'SF Mono',monospace;flex-shrink:0}
+.thumb-row .flags-cell{display:flex;gap:2px;flex-shrink:0}
+
+/* CoverFlow view */
+.coverflow-section{height:340px;perspective:800px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;margin-bottom:4px;user-select:none}
+.cf-track{position:absolute;width:220px;height:220px;transition:all .4s ease;cursor:pointer;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.cf-track img{width:100%;height:100%;object-fit:cover}
+.cf-track .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a)}
+.cf-info{text-align:center;padding:12px;position:relative;z-index:10}
+.cf-info .title{font-size:18px;font-weight:700;margin-bottom:2px}
+.cf-info .artist{font-size:14px;color:#888}
+.cf-info .album{font-size:12px;color:#555;margin-top:2px}
+.cf-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(255,255,255,.08);border:none;border-radius:50%;color:#fff;font-size:20px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.cf-nav:hover{background:rgba(255,255,255,.15)}
+.cf-nav.left{left:16px}
+.cf-nav.right{right:16px}
+/* Reflection effect */
+.cf-reflection{position:absolute;bottom:-220px;width:220px;height:220px;overflow:hidden;opacity:.15;transform:scaleY(-1);border-radius:8px;pointer-events:none;mask-image:linear-gradient(to bottom,rgba(0,0,0,.4),transparent 60%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.4),transparent 60%)}
+.cf-reflection img{width:100%;height:100%;object-fit:cover}
+.cf-list{border-top:1px solid #222;max-height:300px;overflow-y:auto}
+
 .empty-state{text-align:center;padding:60px 20px;color:#444}
 .empty-state h2{font-size:22px;margin-bottom:10px;color:#666}
 .empty-state p{font-size:13px;margin-bottom:20px}
@@ -144,8 +177,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <button class="hamburger" onclick="toggleSidebar()">☰</button>
   <h1>Music Library</h1>
   <div class="nav">
-    <button class="active" onclick="setView('grid')" id="viewGrid">Grid</button>
-    <button onclick="setView('list')" id="viewList">List</button>
+    <button onclick="setView('list')" id="viewList" title="List">☰</button>
+    <button onclick="setView('thumb')" id="viewThumb" title="Thumbnails">⊞</button>
+    <button class="active" onclick="setView('grid')" id="viewGrid" title="Grid">⊟</button>
+    <button onclick="setView('coverflow')" id="viewCoverflow" title="CoverFlow">▤</button>
   </div>
   <div class="search-box"><input type="text" id="searchInput" placeholder="Search songs, artists..." oninput="debounceSearch()"></div>
   <span class="stats" id="statsText">Loading...</span>
@@ -185,7 +220,17 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <div class="carousel" id="heroCarousel"></div>
   </div>
   <div id="mainGrid" class="grid-view" style="display:none"></div>
+  <div id="mainThumb" class="thumb-view" style="display:none"></div>
   <div id="mainList" class="list-view" style="display:none"></div>
+  <div id="mainCoverflow" style="display:none">
+    <div class="coverflow-section" id="cfContainer">
+      <button class="cf-nav left" onclick="cfNavigate(-1)">‹</button>
+      <div id="cfTracks"></div>
+      <button class="cf-nav right" onclick="cfNavigate(1)">›</button>
+    </div>
+    <div class="cf-info"><div class="title" id="cfTitle"></div><div class="artist" id="cfArtist"></div><div class="album" id="cfAlbum"></div></div>
+    <div class="cf-list list-view" id="cfList"></div>
+  </div>
 </div>
 
 <div class="player" id="player">
@@ -315,7 +360,14 @@ let searchTimer;
 function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{currentSearch=document.getElementById("searchInput").value.trim();applyFilters()},200)}
 
 // Views
-function setView(v){currentView=v;document.getElementById("viewGrid").classList.toggle("active",v==="grid");document.getElementById("viewList").classList.toggle("active",v==="list");render()}
+let cfIndex=0;
+function setView(v){
+  currentView=v;
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  const btn=document.getElementById("view"+v.charAt(0).toUpperCase()+v.slice(1));
+  if(btn)btn.classList.add("active");
+  render();
+}
 
 function renderHero(){
   const carousel=document.getElementById("heroCarousel");
@@ -324,8 +376,16 @@ function renderHero(){
 }
 
 function render(){
-  if(currentView==="grid"){document.getElementById("mainGrid").style.display="grid";document.getElementById("mainList").style.display="none";renderGrid()}
-  else{document.getElementById("mainGrid").style.display="none";document.getElementById("mainList").style.display="block";renderList()}
+  const views=["mainGrid","mainList","mainThumb","mainCoverflow"];
+  views.forEach(v=>document.getElementById(v).style.display="none");
+  // Hide hero in coverflow mode
+  const heroEl=document.getElementById("heroSection");
+  if(heroEl)heroEl.style.display=currentView==="coverflow"?"none":"block";
+
+  if(currentView==="grid"){document.getElementById("mainGrid").style.display="grid";renderGrid()}
+  else if(currentView==="list"){document.getElementById("mainList").style.display="block";renderList()}
+  else if(currentView==="thumb"){document.getElementById("mainThumb").style.display="grid";renderThumb()}
+  else if(currentView==="coverflow"){document.getElementById("mainCoverflow").style.display="block";renderCoverflow()}
 }
 
 function renderGrid(){
@@ -337,6 +397,89 @@ function renderList(){
   h+=filteredTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><input class="genre-editable" value="${esc(t.genre)}" onclick="event.stopPropagation()" onchange="quickGenre('${t.id}',this.value)" placeholder="+ genre"><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
   document.getElementById("mainList").innerHTML=h;
 }
+
+function renderThumb(){
+  document.getElementById("mainThumb").innerHTML=filteredTracks.map(t=>`<div class="thumb-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="info"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<div class="genre-sm">${esc(t.genre)}</div>`:""}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+}
+
+// CoverFlow
+function renderCoverflow(){
+  // Get tracks with covers for the flow
+  const cfTracks=filteredTracks.filter(t=>t.cover);
+  if(!cfTracks.length){document.getElementById("cfContainer").innerHTML="<p style='color:#555;font-size:14px'>No cover art to display</p>";return}
+  if(cfIndex>=cfTracks.length)cfIndex=0;
+  if(cfIndex<0)cfIndex=cfTracks.length-1;
+
+  const container=document.getElementById("cfTracks");
+  const containerW=document.getElementById("cfContainer").offsetWidth;
+  container.innerHTML="";
+
+  // Show 7 albums centered on cfIndex
+  for(let offset=-3;offset<=3;offset++){
+    let idx=cfIndex+offset;
+    if(idx<0)idx+=cfTracks.length;
+    if(idx>=cfTracks.length)idx-=cfTracks.length;
+    const t=cfTracks[idx];
+    const el=document.createElement("div");
+    el.className="cf-track";
+
+    const absOff=Math.abs(offset);
+    const centerX=containerW/2-110;
+    const x=centerX+offset*140;
+    const z=-absOff*100;
+    const rotY=offset<0?35:offset>0?-35:0;
+    const scale=offset===0?1:.7;
+    const zIdx=10-absOff;
+    const opacity=absOff>2?.3:1;
+
+    el.style.transform=`translateX(${x}px) translateZ(${z}px) rotateY(${rotY}deg) scale(${scale})`;
+    el.style.zIndex=zIdx;
+    el.style.opacity=opacity;
+
+    el.innerHTML=t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`;
+    if(offset===0){
+      // Add reflection
+      el.innerHTML+=`<div class="cf-reflection">${t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`}</div>`;
+    }
+    el.onclick=()=>{
+      if(offset===0){playTrack(t.id)}
+      else{cfIndex=idx;renderCoverflow()}
+    };
+    el.ondblclick=()=>{if(offset===0)openTagModal(t.id)};
+    container.appendChild(el);
+  }
+
+  // Update info
+  const ct=cfTracks[cfIndex];
+  document.getElementById("cfTitle").textContent=ct.title;
+  document.getElementById("cfArtist").textContent=ct.artist;
+  document.getElementById("cfAlbum").textContent=ct.album||ct.genre||"";
+
+  // Render the list below coverflow filtered to same artist or all
+  const cfList=document.getElementById("cfList");
+  const artistTracks=filteredTracks.filter(t=>t.artist===ct.artist);
+  const listTracks=artistTracks.length>1?artistTracks:filteredTracks.slice(Math.max(0,filteredTracks.indexOf(ct)-10),filteredTracks.indexOf(ct)+20);
+  let h=`<div class="list-header"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
+  h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:#666">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+  cfList.innerHTML=h;
+}
+
+function cfNavigate(dir){
+  const cfTracks=filteredTracks.filter(t=>t.cover);
+  if(!cfTracks.length)return;
+  cfIndex+=dir;
+  if(cfIndex<0)cfIndex=cfTracks.length-1;
+  if(cfIndex>=cfTracks.length)cfIndex=0;
+  renderCoverflow();
+}
+
+// Keyboard nav for coverflow
+document.addEventListener("keydown",e=>{
+  if(currentView!=="coverflow")return;
+  if(e.key==="ArrowLeft"){cfNavigate(-1);e.preventDefault()}
+  if(e.key==="ArrowRight"){cfNavigate(1);e.preventDefault()}
+  if(e.key==="Enter"){const cfTracks=filteredTracks.filter(t=>t.cover);if(cfTracks[cfIndex])playTrack(cfTracks[cfIndex].id)}
+});
 
 async function quickGenre(id,genre){
   await fetch(`${API}/tracks/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({genre})});
