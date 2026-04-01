@@ -36,7 +36,8 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .sidebar .pl-item .pl-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
 .sidebar .new-pl{padding:8px;border-radius:6px;cursor:pointer;font-size:12px;color:#666;display:flex;align-items:center;gap:6px}
 .sidebar .new-pl:hover{background:#1a1a1a;color:#aaa}
-.sidebar .serato-section{border-top:1px solid #222;margin-top:12px;padding-top:8px}
+.sidebar .serato-section{border-top:1px solid #222;margin-top:12px}
+.sidebar .serato-section[open] .serato-arrow{transform:rotate(90deg)}
 
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:none}
 .overlay.active{display:block}
@@ -196,7 +197,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <button class="active" onclick="setView('grid')" id="viewGrid" title="Grid">⊟</button>
     <button onclick="setView('coverflow')" id="viewCoverflow" title="CoverFlow">▤</button>
   </div>
-  <div class="search-box"><input type="text" id="searchInput" placeholder="Search songs, artists..." oninput="debounceSearch()"></div>
+  <div class="search-box"><input type="text" id="searchInput" placeholder="Search songs, artists... (#tag)" oninput="debounceSearch()"></div>
   <span class="stats" id="statsText">Loading...</span>
   <button class="auto-tag-btn" id="autoTagBtn" onclick="autoTagGenres()">Spotify Auto-Tag</button>
   <button class="scan-btn" id="scanBtn" onclick="scanLibrary()">Scan</button>
@@ -215,10 +216,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div id="playlistsList"></div>
   <div class="new-pl" onclick="createPlaylist()">+ New Playlist</div>
 
-  <div class="serato-section">
-    <h3>Serato Crates</h3>
+  <details class="serato-section">
+    <summary style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:12px 8px 8px;user-select:none;list-style:none;display:flex;align-items:center;gap:6px"><span class="serato-arrow" style="font-size:8px;transition:transform .2s">▶</span> Serato Crates</summary>
     <div id="seratoCrates"></div>
-  </div>
+  </details>
 </div>
 
 <div class="filterbar" id="filterBar"></div>
@@ -250,8 +251,8 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div class="player" id="player">
-  <div class="player-art" id="playerArt"></div>
-  <div class="player-info"><div class="title" id="playerTitle"></div><div class="artist" id="playerArtist"></div></div>
+  <div class="player-art" id="playerArt" onclick="goToCurrentInCoverflow()" style="cursor:pointer" title="Show in CoverFlow"></div>
+  <div class="player-info" onclick="goToCurrentInCoverflow()" style="cursor:pointer" title="Show in CoverFlow"><div class="title" id="playerTitle"></div><div class="artist" id="playerArtist"></div></div>
   <button class="play-btn" onclick="togglePlayerPlay()">
     <svg id="pPlayIcon" viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg>
     <svg id="pPauseIcon" viewBox="0 0 24 24" style="display:none"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
@@ -381,7 +382,16 @@ function applyFilters(){
   filteredTracks=allTracks;
   if(currentGenre==="__none__")filteredTracks=filteredTracks.filter(t=>!t.genre);
   else if(currentGenre)filteredTracks=filteredTracks.filter(t=>t.genre===currentGenre);
-  if(currentSearch){const q=currentSearch.toLowerCase();filteredTracks=filteredTracks.filter(t=>t.title.toLowerCase().includes(q)||t.artist.toLowerCase().includes(q))}
+  if(currentSearch){
+    if(currentSearch.startsWith("#")){
+      // Search custom tags
+      const tag=currentSearch.slice(1).toLowerCase();
+      filteredTracks=filteredTracks.filter(t=>(t.custom_tags||[]).some(ct=>ct.toLowerCase().includes(tag)));
+    }else{
+      const q=currentSearch.toLowerCase();
+      filteredTracks=filteredTracks.filter(t=>t.title.toLowerCase().includes(q)||t.artist.toLowerCase().includes(q));
+    }
+  }
   render();
 }
 let searchTimer;
@@ -621,7 +631,7 @@ async function loadPlaylist(pid){
   currentPlaylistId=pid;
   activeSidebarId='pl-'+pid;
   const res=await fetch(`${API}/playlists/${pid}`);const data=await res.json();
-  filteredTracks=data.tracks;render();toggleSidebar();
+  filteredTracks=data.tracks;cfIndex=0;cfBuilt=false;render();toggleSidebar();
 }
 function createPlaylist(){
   const name=prompt("Playlist name:");if(!name)return;
@@ -663,6 +673,21 @@ async function importSeratoCrate(path,name){
   const data=await res.json();
   alert(`Imported "${data.name}" — ${data.matched}/${data.total} tracks matched`);
   loadPlaylists();
+}
+
+function goToCurrentInCoverflow(){
+  if(!currentTrack)return;
+  const cfTracks=filteredTracks.filter(t=>t.cover);
+  const idx=cfTracks.findIndex(t=>t.id===currentTrack.id);
+  if(idx>=0){cfIndex=idx;setView('coverflow')}
+  else{
+    // Track not in current filter, show all
+    filteredTracks=allTracks;cfIndex=0;
+    const cfAll=filteredTracks.filter(t=>t.cover);
+    const i2=cfAll.findIndex(t=>t.id===currentTrack.id);
+    if(i2>=0)cfIndex=i2;
+    setView('coverflow');
+  }
 }
 
 function formatTime(s){if(!s||isNaN(s))return"0:00";const m=Math.floor(s/60);const sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,"0")}`}
