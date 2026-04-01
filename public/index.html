@@ -280,10 +280,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
         <button class="btn btn-secondary" onclick="addCustomTag()" style="padding:6px 12px;font-size:11px">Add</button>
       </div>
     </div>
-    <div class="field">
-      <label>File Location</label>
-      <div id="editFilePath" style="font-size:11px;color:#555;font-family:'SF Mono',monospace;word-break:break-all;padding:6px 10px;background:#111;border-radius:6px;user-select:all;cursor:text"></div>
-    </div>
+    <details style="margin-bottom:12px">
+      <summary style="font-size:10px;color:#888;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;user-select:none">File Location</summary>
+      <div id="editFilePath" style="font-size:11px;color:#555;font-family:'SF Mono',monospace;word-break:break-all;padding:6px 10px;background:#111;border-radius:6px;user-select:all;cursor:text;margin-top:4px"></div>
+    </details>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveTrackEdit()">Save</button>
       <button class="btn btn-spotify" onclick="spotifyLookup()">Spotify Genre</button>
