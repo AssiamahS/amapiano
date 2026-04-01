@@ -156,7 +156,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .thumb-row .flags-cell{display:flex;gap:2px;flex-shrink:0}
 
 /* CoverFlow view */
-.coverflow-section{background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;padding:20px 0;user-select:none}
+.coverflow-section{background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;padding:20px 0;user-select:none;position:relative}
 .cf-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:20px 0;align-items:center;justify-content:center;min-height:260px}
 .cf-scroll::-webkit-scrollbar{height:0;display:none}
 /* Pad left/right so first/last card can center */
@@ -166,6 +166,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .cf-card:hover:not(.active){opacity:.7;filter:brightness(.8)}
 .cf-card img{width:220px;height:220px;object-fit:cover;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7);display:block}
 .cf-card .no-art{width:220px;height:220px;display:flex;align-items:center;justify-content:center;font-size:50px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7)}
+.cf-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(255,255,255,.1);border:none;border-radius:50%;color:#fff;font-size:22px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center}
+.cf-nav:hover{background:rgba(255,255,255,.2)}
+.cf-nav.left{left:12px}
+.cf-nav.right{right:12px}
 .cf-slider-row{display:flex;align-items:center;gap:12px;padding:10px 24px 0}
 .cf-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#222;border-radius:2px;outline:none}
 .cf-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#ff5500;cursor:pointer;border:2px solid #333}
@@ -239,7 +243,9 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div id="mainList" class="list-view" style="display:none"></div>
   <div id="mainCoverflow" style="display:none">
     <div class="coverflow-section" id="cfContainer">
+      <button class="cf-nav left" onclick="cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex)">‹</button>
       <div class="cf-scroll" id="cfScroll"></div>
+      <button class="cf-nav right" onclick="cfIndex=Math.min((cfTracksCached||[]).length-1,cfIndex+1);cfSliderChange(cfIndex)">›</button>
       <div class="cf-slider-row">
         <span class="cf-slider-label" id="cfSliderLabel">1 / 0</span>
         <input type="range" class="cf-slider" id="cfSlider" min="0" max="0" value="0" oninput="cfSliderChange(this.value)">
