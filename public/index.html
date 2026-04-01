@@ -148,10 +148,11 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .thumb-row .flags-cell{display:flex;gap:2px;flex-shrink:0}
 
 /* CoverFlow view */
-.coverflow-section{height:340px;perspective:800px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;margin-bottom:4px;user-select:none}
-.cf-track{position:absolute;width:220px;height:220px;transition:all .4s ease;cursor:pointer;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6)}
-.cf-track img{width:100%;height:100%;object-fit:cover}
-.cf-track .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a)}
+.coverflow-section{height:360px;perspective:900px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;margin-bottom:4px;user-select:none}
+#cfTracks{position:relative;width:100%;height:100%;transform-style:preserve-3d}
+.cf-track{position:absolute;width:200px;height:200px;top:50%;margin-top:-120px;transition:all .45s cubic-bezier(.25,.1,.25,1);cursor:pointer;border-radius:8px;overflow:visible;backface-visibility:hidden}
+.cf-track img{width:200px;height:200px;object-fit:cover;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:block}
+.cf-track .no-art{width:200px;height:200px;display:flex;align-items:center;justify-content:center;font-size:60px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7)}
 .cf-info{text-align:center;padding:12px;position:relative;z-index:10}
 .cf-info .title{font-size:18px;font-weight:700;margin-bottom:2px}
 .cf-info .artist{font-size:14px;color:#888}
@@ -160,10 +161,14 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .cf-nav:hover{background:rgba(255,255,255,.15)}
 .cf-nav.left{left:16px}
 .cf-nav.right{right:16px}
-/* Reflection effect */
-.cf-reflection{position:absolute;bottom:-220px;width:220px;height:220px;overflow:hidden;opacity:.15;transform:scaleY(-1);border-radius:8px;pointer-events:none;mask-image:linear-gradient(to bottom,rgba(0,0,0,.4),transparent 60%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.4),transparent 60%)}
-.cf-reflection img{width:100%;height:100%;object-fit:cover}
+/* Reflection */
+.cf-reflection{margin-top:2px;width:200px;height:80px;overflow:hidden;opacity:.2;transform:scaleY(-1);border-radius:0 0 8px 8px;pointer-events:none;mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 70%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 70%)}
+.cf-reflection img{width:200px;height:200px;object-fit:cover;display:block}
 .cf-list{border-top:1px solid #222;max-height:300px;overflow-y:auto}
+
+/* Scroll for filter bar in all views */
+.filterbar{scrollbar-width:none;-ms-overflow-style:none}
+.filterbar::-webkit-scrollbar{display:none}
 
 .empty-state{text-align:center;padding:60px 20px;color:#444}
 .empty-state h2{font-size:22px;margin-bottom:10px;color:#666}
@@ -404,45 +409,52 @@ function renderThumb(){
 
 // CoverFlow
 function renderCoverflow(){
-  // Get tracks with covers for the flow
   const cfTracks=filteredTracks.filter(t=>t.cover);
-  if(!cfTracks.length){document.getElementById("cfContainer").innerHTML="<p style='color:#555;font-size:14px'>No cover art to display</p>";return}
+  if(!cfTracks.length){
+    // If no covers, show all tracks anyway
+    if(filteredTracks.length){
+      document.getElementById("cfContainer").innerHTML=`<p style="color:#555;font-size:14px">${filteredTracks.length} tracks (no cover art extracted yet — try Scan)</p>`;
+    }else{
+      document.getElementById("cfContainer").innerHTML="<p style='color:#555;font-size:14px'>No tracks to display</p>";
+    }
+    return;
+  }
   if(cfIndex>=cfTracks.length)cfIndex=0;
   if(cfIndex<0)cfIndex=cfTracks.length-1;
 
   const container=document.getElementById("cfTracks");
   const containerW=document.getElementById("cfContainer").offsetWidth;
+  const centerX=containerW/2-100;
   container.innerHTML="";
 
-  // Show 7 albums centered on cfIndex
-  for(let offset=-3;offset<=3;offset++){
-    let idx=cfIndex+offset;
+  // Show 9 albums centered on cfIndex
+  for(let offset=-4;offset<=4;offset++){
+    let idx=(cfIndex+offset)%cfTracks.length;
     if(idx<0)idx+=cfTracks.length;
-    if(idx>=cfTracks.length)idx-=cfTracks.length;
     const t=cfTracks[idx];
     const el=document.createElement("div");
     el.className="cf-track";
 
     const absOff=Math.abs(offset);
-    const centerX=containerW/2-110;
-    const x=centerX+offset*140;
-    const z=-absOff*100;
-    const rotY=offset<0?35:offset>0?-35:0;
-    const scale=offset===0?1:.7;
-    const zIdx=10-absOff;
-    const opacity=absOff>2?.3:1;
+    const spacing=offset===0?0:offset*(80+absOff*8);
+    const x=centerX+spacing;
+    const rotY=offset<0?45:offset>0?-45:0;
+    const scale=offset===0?1.1:Math.max(.55,1-absOff*.12);
+    const zIdx=20-absOff;
+    const opacity=absOff>3?.2:absOff>1?.6:1;
 
-    el.style.transform=`translateX(${x}px) translateZ(${z}px) rotateY(${rotY}deg) scale(${scale})`;
+    el.style.left=x+"px";
+    el.style.transform=`perspective(900px) rotateY(${rotY}deg) scale(${scale})`;
     el.style.zIndex=zIdx;
     el.style.opacity=opacity;
 
-    el.innerHTML=t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`;
-    if(offset===0){
-      // Add reflection
-      el.innerHTML+=`<div class="cf-reflection">${t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`}</div>`;
+    const coverUrl=t.cover;
+    el.innerHTML=coverUrl?`<img src="${coverUrl}">`:`<div class="no-art">♫</div>`;
+    if(offset===0&&coverUrl){
+      el.innerHTML+=`<div class="cf-reflection"><img src="${coverUrl}"></div>`;
     }
     el.onclick=()=>{
-      if(offset===0){playTrack(t.id)}
+      if(offset===0)playTrack(t.id);
       else{cfIndex=idx;renderCoverflow()}
     };
     el.ondblclick=()=>{if(offset===0)openTagModal(t.id)};
@@ -473,13 +485,32 @@ function cfNavigate(dir){
   renderCoverflow();
 }
 
-// Keyboard nav for coverflow
+// Keyboard + wheel nav for coverflow
 document.addEventListener("keydown",e=>{
   if(currentView!=="coverflow")return;
   if(e.key==="ArrowLeft"){cfNavigate(-1);e.preventDefault()}
   if(e.key==="ArrowRight"){cfNavigate(1);e.preventDefault()}
   if(e.key==="Enter"){const cfTracks=filteredTracks.filter(t=>t.cover);if(cfTracks[cfIndex])playTrack(cfTracks[cfIndex].id)}
 });
+
+// Mouse wheel on coverflow
+let cfWheelTimeout;
+document.addEventListener("wheel",e=>{
+  if(currentView!=="coverflow")return;
+  const cf=document.getElementById("cfContainer");
+  if(!cf||!cf.contains(e.target))return;
+  e.preventDefault();
+  clearTimeout(cfWheelTimeout);
+  cfWheelTimeout=setTimeout(()=>{
+    cfNavigate(e.deltaY>0?1:-1);
+  },50);
+},{passive:false});
+
+// Horizontal scroll filter bar with mouse wheel
+document.getElementById("filterBar").addEventListener("wheel",e=>{
+  e.preventDefault();
+  e.currentTarget.scrollLeft+=e.deltaY;
+},{passive:false});
 
 async function quickGenre(id,genre){
   await fetch(`${API}/tracks/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({genre})});
