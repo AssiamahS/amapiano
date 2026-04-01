@@ -148,22 +148,22 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 .thumb-row .flags-cell{display:flex;gap:2px;flex-shrink:0}
 
 /* CoverFlow view */
-.coverflow-section{height:360px;perspective:900px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;margin-bottom:4px;user-select:none}
-#cfTracks{position:relative;width:100%;height:100%;transform-style:preserve-3d}
-.cf-track{position:absolute;width:200px;height:200px;top:50%;margin-top:-120px;transition:all .45s cubic-bezier(.25,.1,.25,1);cursor:pointer;border-radius:8px;overflow:visible;backface-visibility:hidden}
-.cf-track img{width:200px;height:200px;object-fit:cover;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);display:block}
-.cf-track .no-art{width:200px;height:200px;display:flex;align-items:center;justify-content:center;font-size:60px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7)}
-.cf-info{text-align:center;padding:12px;position:relative;z-index:10}
-.cf-info .title{font-size:18px;font-weight:700;margin-bottom:2px}
-.cf-info .artist{font-size:14px;color:#888}
-.cf-info .album{font-size:12px;color:#555;margin-top:2px}
-.cf-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(255,255,255,.08);border:none;border-radius:50%;color:#fff;font-size:20px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.cf-nav:hover{background:rgba(255,255,255,.15)}
-.cf-nav.left{left:16px}
-.cf-nav.right{right:16px}
-/* Reflection */
-.cf-reflection{margin-top:2px;width:200px;height:80px;overflow:hidden;opacity:.2;transform:scaleY(-1);border-radius:0 0 8px 8px;pointer-events:none;mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 70%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 70%)}
-.cf-reflection img{width:200px;height:200px;object-fit:cover;display:block}
+.coverflow-section{background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;padding:20px 0;user-select:none}
+.cf-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 calc(50% - 100px);scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.cf-scroll::-webkit-scrollbar{height:0;display:none}
+.cf-card{flex-shrink:0;width:200px;scroll-snap-align:center;cursor:pointer;transition:transform .2s,opacity .2s;opacity:.5}
+.cf-card.active{opacity:1;transform:scale(1.08)}
+.cf-card:hover{opacity:.8}
+.cf-card img{width:200px;height:200px;object-fit:cover;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);display:block}
+.cf-card .no-art{width:200px;height:200px;display:flex;align-items:center;justify-content:center;font-size:50px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.cf-slider-row{display:flex;align-items:center;gap:12px;padding:10px 24px 0}
+.cf-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#222;border-radius:2px;outline:none}
+.cf-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#ff5500;cursor:pointer;border:2px solid #333}
+.cf-slider-label{font-size:10px;color:#555;min-width:80px;text-align:center;font-family:'SF Mono',monospace}
+.cf-info{text-align:center;padding:10px 12px 6px}
+.cf-info .title{font-size:17px;font-weight:700;margin-bottom:2px}
+.cf-info .artist{font-size:13px;color:#888}
+.cf-info .album{font-size:11px;color:#555;margin-top:2px}
 .cf-list{border-top:1px solid #222;max-height:300px;overflow-y:auto}
 
 /* Scroll for filter bar in all views */
@@ -197,10 +197,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 <div class="overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="sidebar" id="sidebar">
   <h3>Library</h3>
-  <div class="pl-item" onclick="showAll()"><span class="pl-icon">♫</span>All Songs<span class="pl-count" id="allCount"></span></div>
-  <div class="pl-item" onclick="filterFlag('video')"><span class="pl-icon">☁</span>Music Videos<span class="pl-count" id="videoCount"></span></div>
-  <div class="pl-item" onclick="filterFlag('lyrics')"><span class="pl-icon">✓</span>Lyrics/Visualizer<span class="pl-count" id="lyricsCount"></span></div>
-  <div class="pl-item" onclick="showUntagged()"><span class="pl-icon">?</span>No Genre<span class="pl-count" id="untaggedCount"></span></div>
+  <div class="pl-item active" data-sb="all" onclick="sbSelect(this);showAll()"><span class="pl-icon">♫</span>All Songs<span class="pl-count" id="allCount"></span></div>
+  <div class="pl-item" data-sb="video" onclick="sbSelect(this);filterFlag('video')"><span class="pl-icon">☁</span>Music Videos<span class="pl-count" id="videoCount"></span></div>
+  <div class="pl-item" data-sb="lyrics" onclick="sbSelect(this);filterFlag('lyrics')"><span class="pl-icon">✓</span>Lyrics/Visualizer<span class="pl-count" id="lyricsCount"></span></div>
+  <div class="pl-item" data-sb="untagged" onclick="sbSelect(this);showUntagged()"><span class="pl-icon">?</span>No Genre<span class="pl-count" id="untaggedCount"></span></div>
 
   <h3>Playlists</h3>
   <div id="playlistsList"></div>
@@ -229,9 +229,11 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div id="mainList" class="list-view" style="display:none"></div>
   <div id="mainCoverflow" style="display:none">
     <div class="coverflow-section" id="cfContainer">
-      <button class="cf-nav left" onclick="cfNavigate(-1)">‹</button>
-      <div id="cfTracks"></div>
-      <button class="cf-nav right" onclick="cfNavigate(1)">›</button>
+      <div class="cf-scroll" id="cfScroll"></div>
+      <div class="cf-slider-row">
+        <span class="cf-slider-label" id="cfSliderLabel">1 / 0</span>
+        <input type="range" class="cf-slider" id="cfSlider" min="0" max="0" value="0" oninput="cfSliderChange(this.value)">
+      </div>
     </div>
     <div class="cf-info"><div class="title" id="cfTitle"></div><div class="artist" id="cfArtist"></div><div class="album" id="cfAlbum"></div></div>
     <div class="cf-list list-view" id="cfList"></div>
@@ -338,6 +340,7 @@ function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebarOverlay").classList.toggle("active");
 }
+function sbSelect(el){document.querySelectorAll(".sidebar .pl-item").forEach(i=>i.classList.remove("active"));if(el)el.classList.add("active")}
 function showAll(){currentPlaylistId=null;filteredTracks=allTracks;render();toggleSidebar()}
 function showUntagged(){currentPlaylistId=null;filteredTracks=allTracks.filter(t=>!t.genre);render();toggleSidebar()}
 function filterFlag(f){currentPlaylistId=null;filteredTracks=allTracks.filter(t=>(t.flags||[]).includes(f));render();toggleSidebar()}
@@ -408,108 +411,111 @@ function renderThumb(){
 }
 
 // CoverFlow
+let cfBuilt=false;
 function renderCoverflow(){
   const cfTracks=filteredTracks.filter(t=>t.cover);
+  const scroll=document.getElementById("cfScroll");
+  const slider=document.getElementById("cfSlider");
+
   if(!cfTracks.length){
-    // If no covers, show all tracks anyway
-    if(filteredTracks.length){
-      document.getElementById("cfContainer").innerHTML=`<p style="color:#555;font-size:14px">${filteredTracks.length} tracks (no cover art extracted yet — try Scan)</p>`;
-    }else{
-      document.getElementById("cfContainer").innerHTML="<p style='color:#555;font-size:14px'>No tracks to display</p>";
-    }
+    scroll.innerHTML="<p style='color:#555;padding:80px;text-align:center'>No cover art to display</p>";
     return;
   }
-  if(cfIndex>=cfTracks.length)cfIndex=0;
-  if(cfIndex<0)cfIndex=cfTracks.length-1;
 
-  const container=document.getElementById("cfTracks");
-  const containerW=document.getElementById("cfContainer").offsetWidth;
-  const centerX=containerW/2-100;
-  container.innerHTML="";
+  // Build cards
+  scroll.innerHTML=cfTracks.map((t,i)=>`<div class="cf-card${i===cfIndex?" active":""}" data-idx="${i}" onclick="cfSelect(${i})" ondblclick="openTagModal('${t.id}')">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div>`).join("");
 
-  // Show 9 albums centered on cfIndex
-  for(let offset=-4;offset<=4;offset++){
-    let idx=(cfIndex+offset)%cfTracks.length;
-    if(idx<0)idx+=cfTracks.length;
-    const t=cfTracks[idx];
-    const el=document.createElement("div");
-    el.className="cf-track";
+  slider.max=cfTracks.length-1;
+  slider.value=cfIndex;
+  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
 
-    const absOff=Math.abs(offset);
-    const spacing=offset===0?0:offset*(80+absOff*8);
-    const x=centerX+spacing;
-    const rotY=offset<0?45:offset>0?-45:0;
-    const scale=offset===0?1.1:Math.max(.55,1-absOff*.12);
-    const zIdx=20-absOff;
-    const opacity=absOff>3?.2:absOff>1?.6:1;
+  cfUpdateInfo(cfTracks);
 
-    el.style.left=x+"px";
-    el.style.transform=`perspective(900px) rotateY(${rotY}deg) scale(${scale})`;
-    el.style.zIndex=zIdx;
-    el.style.opacity=opacity;
+  // Scroll to active card
+  requestAnimationFrame(()=>{
+    const activeCard=scroll.querySelector(".cf-card.active");
+    if(activeCard)activeCard.scrollIntoView({behavior:cfBuilt?"smooth":"auto",block:"nearest",inline:"center"});
+    cfBuilt=true;
+  });
 
-    const coverUrl=t.cover;
-    el.innerHTML=coverUrl?`<img src="${coverUrl}">`:`<div class="no-art">♫</div>`;
-    if(offset===0&&coverUrl){
-      el.innerHTML+=`<div class="cf-reflection"><img src="${coverUrl}"></div>`;
-    }
-    el.onclick=()=>{
-      if(offset===0)playTrack(t.id);
-      else{cfIndex=idx;renderCoverflow()}
-    };
-    el.ondblclick=()=>{if(offset===0)openTagModal(t.id)};
-    container.appendChild(el);
-  }
+  // Detect scroll-snap landing
+  let scrollTimer;
+  scroll.onscroll=()=>{
+    clearTimeout(scrollTimer);
+    scrollTimer=setTimeout(()=>{
+      // Find which card is centered
+      const scrollCenter=scroll.scrollLeft+scroll.clientWidth/2;
+      const cards=scroll.querySelectorAll(".cf-card");
+      let closest=0,minDist=Infinity;
+      cards.forEach((c,i)=>{
+        const cardCenter=c.offsetLeft-scroll.offsetLeft+100;
+        const dist=Math.abs(cardCenter-scroll.scrollLeft-scroll.clientWidth/2);
+        if(dist<minDist){minDist=dist;closest=i}
+      });
+      if(closest!==cfIndex){
+        cfIndex=closest;
+        cards.forEach((c,i)=>c.classList.toggle("active",i===cfIndex));
+        slider.value=cfIndex;
+        document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
+        cfUpdateInfo(cfTracks);
+      }
+    },100);
+  };
+}
 
-  // Update info
+function cfUpdateInfo(cfTracks){
+  if(!cfTracks)cfTracks=filteredTracks.filter(t=>t.cover);
+  if(!cfTracks.length)return;
   const ct=cfTracks[cfIndex];
   document.getElementById("cfTitle").textContent=ct.title;
   document.getElementById("cfArtist").textContent=ct.artist;
   document.getElementById("cfAlbum").textContent=ct.album||ct.genre||"";
 
-  // Render the list below coverflow filtered to same artist or all
-  const cfList=document.getElementById("cfList");
+  // Track list below
   const artistTracks=filteredTracks.filter(t=>t.artist===ct.artist);
   const listTracks=artistTracks.length>1?artistTracks:filteredTracks.slice(Math.max(0,filteredTracks.indexOf(ct)-10),filteredTracks.indexOf(ct)+20);
   let h=`<div class="list-header"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
   h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:#666">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
-  cfList.innerHTML=h;
+  document.getElementById("cfList").innerHTML=h;
 }
 
-function cfNavigate(dir){
+function cfSelect(i){
   const cfTracks=filteredTracks.filter(t=>t.cover);
-  if(!cfTracks.length)return;
-  cfIndex+=dir;
-  if(cfIndex<0)cfIndex=cfTracks.length-1;
-  if(cfIndex>=cfTracks.length)cfIndex=0;
-  renderCoverflow();
+  cfIndex=i;
+  const scroll=document.getElementById("cfScroll");
+  scroll.querySelectorAll(".cf-card").forEach((c,j)=>c.classList.toggle("active",j===i));
+  const card=scroll.children[i];
+  if(card)card.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+  document.getElementById("cfSlider").value=i;
+  document.getElementById("cfSliderLabel").textContent=`${i+1} / ${cfTracks.length}`;
+  cfUpdateInfo(cfTracks);
+  playTrack(cfTracks[i].id);
 }
 
-// Keyboard + wheel nav for coverflow
+function cfSliderChange(val){
+  cfIndex=parseInt(val);
+  const cfTracks=filteredTracks.filter(t=>t.cover);
+  const scroll=document.getElementById("cfScroll");
+  scroll.querySelectorAll(".cf-card").forEach((c,j)=>c.classList.toggle("active",j===cfIndex));
+  const card=scroll.children[cfIndex];
+  if(card)card.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracks.length}`;
+  cfUpdateInfo(cfTracks);
+}
+
+// Keyboard nav for coverflow
 document.addEventListener("keydown",e=>{
   if(currentView!=="coverflow")return;
-  if(e.key==="ArrowLeft"){cfNavigate(-1);e.preventDefault()}
-  if(e.key==="ArrowRight"){cfNavigate(1);e.preventDefault()}
-  if(e.key==="Enter"){const cfTracks=filteredTracks.filter(t=>t.cover);if(cfTracks[cfIndex])playTrack(cfTracks[cfIndex].id)}
+  const cfTracks=filteredTracks.filter(t=>t.cover);
+  if(!cfTracks.length)return;
+  if(e.key==="ArrowLeft"){cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex);e.preventDefault()}
+  if(e.key==="ArrowRight"){cfIndex=Math.min(cfTracks.length-1,cfIndex+1);cfSliderChange(cfIndex);e.preventDefault()}
+  if(e.key==="Enter"){playTrack(cfTracks[cfIndex].id)}
 });
-
-// Mouse wheel on coverflow
-let cfWheelTimeout;
-document.addEventListener("wheel",e=>{
-  if(currentView!=="coverflow")return;
-  const cf=document.getElementById("cfContainer");
-  if(!cf||!cf.contains(e.target))return;
-  e.preventDefault();
-  clearTimeout(cfWheelTimeout);
-  cfWheelTimeout=setTimeout(()=>{
-    cfNavigate(e.deltaY>0?1:-1);
-  },50);
-},{passive:false});
 
 // Horizontal scroll filter bar with mouse wheel
 document.getElementById("filterBar").addEventListener("wheel",e=>{
-  e.preventDefault();
-  e.currentTarget.scrollLeft+=e.deltaY;
+  if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){e.preventDefault();e.currentTarget.scrollLeft+=e.deltaY}
 },{passive:false});
 
 async function quickGenre(id,genre){
@@ -587,7 +593,7 @@ audioEl.addEventListener("ended",()=>{isPlaying=false;updatePlayerBtn();if(curre
 async function loadPlaylists(){
   const res=await fetch(`${API}/playlists`);const data=await res.json();
   const el=document.getElementById("playlistsList");
-  el.innerHTML=data.playlists.map(p=>`<div class="pl-item" onclick="loadPlaylist('${p.id}')"><span class="pl-icon">♪</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
+  el.innerHTML=data.playlists.map(p=>`<div class="pl-item" data-sb="pl-${p.id}" onclick="sbSelect(this);loadPlaylist('${p.id}')"><span class="pl-icon">♪</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
 }
 async function loadPlaylist(pid){
   currentPlaylistId=pid;
