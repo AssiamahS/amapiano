@@ -275,7 +275,14 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <div class="field">
       <label>Custom Tags</label>
       <div class="tags-input" id="editTags"></div>
-      <input type="text" id="newTagInput" placeholder="Add tag + Enter" style="margin-top:6px" onkeydown="if(event.key==='Enter'){addCustomTag();event.preventDefault()}">
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input type="text" id="newTagInput" placeholder="Type tag + Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addCustomTag();event.preventDefault()}">
+        <button class="btn btn-secondary" onclick="addCustomTag()" style="padding:6px 12px;font-size:11px">Add</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>File Location</label>
+      <div id="editFilePath" style="font-size:11px;color:#555;font-family:'SF Mono',monospace;word-break:break-all;padding:6px 10px;background:#111;border-radius:6px;user-select:all;cursor:text"></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveTrackEdit()">Save</button>
@@ -543,6 +550,7 @@ function openTagModal(id){
   document.getElementById("editTitle").value=t.title;document.getElementById("editArtist").value=t.artist;document.getElementById("editGenre").value=t.genre;
   const genres=[...new Set(allTracks.map(t=>t.genre).filter(Boolean))];
   document.getElementById("genreList").innerHTML=genres.map(g=>`<option value="${g}">`).join("");
+  document.getElementById("editFilePath").textContent=t.path||"Unknown";
   renderEditTags();document.getElementById("tagModal").classList.add("active");
 }
 function closeTagModal(){document.getElementById("tagModal").classList.remove("active")}
