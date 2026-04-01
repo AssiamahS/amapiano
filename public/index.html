@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Library</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
+
+/* Top bar */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:#111;border-bottom:1px solid #222;display:flex;align-items:center;padding:0 24px;z-index:100;gap:20px}
+.topbar h1{font-size:17px;font-weight:700;color:#ff5500;flex-shrink:0}
+.topbar .nav{display:flex;gap:4px;background:#1a1a1a;border-radius:8px;padding:3px}
+.topbar .nav button{padding:6px 14px;border:none;background:none;color:#888;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .15s}
+.topbar .nav button.active{background:#ff5500;color:#fff}
+.topbar .nav button:hover:not(.active){color:#fff}
+.search-box{flex:1;max-width:360px;position:relative}
+.search-box input{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 12px 8px 32px;color:#eee;font-size:13px;outline:none}
+.search-box input:focus{border-color:#ff5500}
+.search-box::before{content:"⌕";position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#555;font-size:16px}
+.topbar .stats{font-size:11px;color:#555;margin-left:auto;flex-shrink:0}
+.scan-btn{padding:6px 14px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600}
+.scan-btn:hover{border-color:#ff5500;color:#ff5500}
+
+/* Filter bar */
+.filterbar{position:fixed;top:56px;left:0;right:0;height:44px;background:#0e0e0e;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;padding:0 24px;gap:8px;z-index:90;overflow-x:auto}
+.filter-chip{padding:5px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;font-size:11px;color:#888;cursor:pointer;white-space:nowrap;font-weight:500;transition:all .15s}
+.filter-chip:hover{border-color:#555;color:#ccc}
+.filter-chip.active{background:#ff5500;border-color:#ff5500;color:#fff}
+.filter-chip .count{color:#555;margin-left:4px;font-weight:400}
+.filter-chip.active .count{color:rgba(255,255,255,.7)}
+
+/* Main content */
+.content{margin-top:100px;padding:24px}
+
+/* Hero / horizontal carousel */
+.hero-section{margin-bottom:32px}
+.hero-section h2{font-size:22px;font-weight:700;margin-bottom:16px;color:#fff}
+.carousel{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.carousel::-webkit-scrollbar{height:6px}
+.carousel::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.carousel::-webkit-scrollbar-track{background:transparent}
+
+.hero-card{flex-shrink:0;width:200px;scroll-snap-align:start;cursor:pointer;transition:transform .2s}
+.hero-card:hover{transform:scale(1.03)}
+.hero-card .art{width:200px;height:200px;border-radius:12px;background:#1a1a1a;overflow:hidden;position:relative}
+.hero-card .art img{width:100%;height:100%;object-fit:cover}
+.hero-card .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;color:#333;background:linear-gradient(135deg,#1a1a1a,#222)}
+.hero-card .art .play-overlay{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:rgba(255,85,0,.9);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.hero-card:hover .play-overlay{opacity:1}
+.hero-card .art .play-overlay::after{content:"";border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent white;margin-left:2px}
+.hero-card .meta{padding:8px 2px}
+.hero-card .meta .title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-card .meta .artist{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Grid view */
+.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.grid-card{cursor:pointer;transition:transform .2s}
+.grid-card:hover{transform:scale(1.03)}
+.grid-card .art{width:100%;aspect-ratio:1;border-radius:10px;background:#1a1a1a;overflow:hidden;position:relative}
+.grid-card .art img{width:100%;height:100%;object-fit:cover}
+.grid-card .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#333;background:linear-gradient(135deg,#1a1a1a,#222)}
+.grid-card .art .play-overlay{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:rgba(255,85,0,.9);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.grid-card:hover .play-overlay{opacity:1}
+.grid-card .art .play-overlay::after{content:"";border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent white;margin-left:2px}
+.grid-card .meta{padding:6px 2px}
+.grid-card .meta .title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid-card .meta .artist{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid-card .meta .genre-tag{display:inline-block;font-size:10px;padding:2px 6px;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#888;margin-top:3px}
+
+/* List view */
+.list-view{width:100%}
+.list-header{display:grid;grid-template-columns:48px 1fr 1fr 150px 80px 60px;gap:12px;padding:8px 12px;border-bottom:1px solid #222;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;font-weight:600;position:sticky;top:100px;background:#0a0a0a;z-index:10}
+.list-row{display:grid;grid-template-columns:48px 1fr 1fr 150px 80px 60px;gap:12px;padding:8px 12px;align-items:center;border-bottom:1px solid #111;cursor:pointer;transition:background .15s}
+.list-row:hover{background:#151515}
+.list-row.playing{background:#1f1510}
+.list-row .art{width:40px;height:40px;border-radius:4px;overflow:hidden;background:#1a1a1a;flex-shrink:0}
+.list-row .art img{width:100%;height:100%;object-fit:cover}
+.list-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333}
+.list-row .title{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-row .artist{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-row .genre{font-size:11px;color:#666}
+.list-row .genre-editable{background:#1a1a1a;border:1px solid transparent;border-radius:4px;padding:2px 6px;color:#888;font-size:11px;cursor:pointer;min-width:60px;outline:none}
+.list-row .genre-editable:hover{border-color:#333}
+.list-row .genre-editable:focus{border-color:#ff5500;color:#eee}
+.list-row .duration{font-size:11px;color:#555;font-family:'SF Mono',monospace}
+.list-row .tags-cell{display:flex;gap:3px;flex-wrap:wrap}
+.list-row .custom-tag{font-size:9px;padding:1px 5px;background:#222;border-radius:8px;color:#888}
+
+/* Player bar */
+.player{position:fixed;bottom:0;left:0;right:0;height:64px;background:#111;border-top:1px solid #222;display:flex;align-items:center;padding:0 20px;gap:14px;z-index:100;display:none}
+.player.active{display:flex}
+.player .player-art{width:44px;height:44px;border-radius:6px;overflow:hidden;background:#1a1a1a;flex-shrink:0}
+.player .player-art img{width:100%;height:100%;object-fit:cover}
+.player .player-info{min-width:0;max-width:200px}
+.player .player-info .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .player-info .artist{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .play-btn{width:36px;height:36px;border-radius:50%;background:#ff5500;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.player .play-btn svg{fill:white;width:14px;height:14px}
+.player .progress{flex:1;height:4px;background:#222;border-radius:2px;cursor:pointer;position:relative}
+.player .progress .bar{height:100%;background:#ff5500;border-radius:2px;width:0}
+.player .time{font-size:11px;color:#555;font-family:'SF Mono',monospace;min-width:90px;text-align:center}
+
+/* Tag modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#1a1a1a;border-radius:16px;padding:24px;width:420px;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal .field{margin-bottom:14px}
+.modal .field label{display:block;font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.modal .field input,.modal .field select{width:100%;background:#111;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#eee;font-size:13px;outline:none}
+.modal .field input:focus,.modal .field select:focus{border-color:#ff5500}
+.modal .tags-input{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.modal .tag-pill{display:flex;align-items:center;gap:4px;padding:4px 10px;background:#222;border-radius:12px;font-size:12px;color:#ccc}
+.modal .tag-pill .remove{cursor:pointer;color:#666;font-size:14px}
+.modal .tag-pill .remove:hover{color:#ff5500}
+.modal .btn-row{display:flex;gap:8px;margin-top:18px}
+.modal .btn{padding:8px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.modal .btn-primary{background:#ff5500;color:#fff}
+.modal .btn-primary:hover{background:#e64d00}
+.modal .btn-secondary{background:#222;color:#aaa}
+.modal .btn-secondary:hover{background:#333}
+
+.empty-state{text-align:center;padding:80px 20px;color:#444}
+.empty-state h2{font-size:24px;margin-bottom:12px;color:#666}
+.empty-state p{font-size:14px;margin-bottom:24px}
+.empty-state .scan-big{padding:12px 32px;background:#ff5500;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <h1>Music Library</h1>
+  <div class="nav">
+    <button class="active" onclick="setView('grid')" id="viewGrid">Grid</button>
+    <button onclick="setView('list')" id="viewList">List</button>
+  </div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search songs, artists..." oninput="debounceSearch()">
+  </div>
+  <span class="stats" id="statsText">Loading...</span>
+  <button class="scan-btn" id="scanBtn" onclick="scanLibrary()">Scan Library</button>
+</div>
+
+<!-- Filter bar -->
+<div class="filterbar" id="filterBar">
+  <div class="filter-chip active" data-genre="" onclick="filterGenre(this)">All</div>
+  <div class="filter-chip" data-genre="__none__" onclick="filterGenre(this)">No Genre</div>
+</div>
+
+<!-- Content -->
+<div class="content" id="content" style="padding-bottom:80px">
+  <div class="empty-state" id="emptyState">
+    <h2>Welcome to your Music Library</h2>
+    <p>Scan your Music folder to import tracks, then tag genres and organize.</p>
+    <button class="scan-big" onclick="scanLibrary()">Scan Music Folder</button>
+  </div>
+  <div id="heroSection" class="hero-section" style="display:none">
+    <h2>Recently Added</h2>
+    <div class="carousel" id="heroCarousel"></div>
+  </div>
+  <div id="mainGrid" class="grid-view" style="display:none"></div>
+  <div id="mainList" class="list-view" style="display:none"></div>
+</div>
+
+<!-- Player -->
+<div class="player" id="player">
+  <div class="player-art" id="playerArt"></div>
+  <div class="player-info">
+    <div class="title" id="playerTitle"></div>
+    <div class="artist" id="playerArtist"></div>
+  </div>
+  <button class="play-btn" id="playerPlayBtn" onclick="togglePlayerPlay()">
+    <svg id="pPlayIcon" viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg>
+    <svg id="pPauseIcon" viewBox="0 0 24 24" style="display:none"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
+  </button>
+  <span class="time" id="playerTime">0:00 / 0:00</span>
+  <div class="progress" id="playerProgress" onclick="seekPlayer(event)">
+    <div class="bar" id="playerBar"></div>
+  </div>
+</div>
+
+<!-- Tag modal -->
+<div class="modal-overlay" id="tagModal" onclick="if(event.target===this)closeTagModal()">
+  <div class="modal">
+    <h3>Edit Track</h3>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="editTitle">
+    </div>
+    <div class="field">
+      <label>Artist</label>
+      <input type="text" id="editArtist">
+    </div>
+    <div class="field">
+      <label>Genre</label>
+      <input type="text" id="editGenre" placeholder="e.g. Amapiano, Jersey Club, Afrobeats" list="genreList">
+      <datalist id="genreList"></datalist>
+    </div>
+    <div class="field">
+      <label>Custom Tags</label>
+      <div class="tags-input" id="editTags"></div>
+      <input type="text" id="newTagInput" placeholder="Add tag + Enter" style="margin-top:8px" onkeydown="if(event.key==='Enter'){addCustomTag();event.preventDefault()}">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveTrackEdit()">Save</button>
+      <button class="btn btn-secondary" onclick="closeTagModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "/api";
+let allTracks = [], filteredTracks = [], currentView = "grid", currentGenre = "", currentSearch = "";
+let audioEl = new Audio(), currentTrack = null, isPlaying = false, animId;
+let editingTrackId = null, editCustomTags = [];
+
+// ── Init ──
+async function init() {
+  const res = await fetch(`${API}/tracks`);
+  const data = await res.json();
+  allTracks = data.tracks;
+  filteredTracks = allTracks;
+
+  if (allTracks.length === 0) {
+    document.getElementById("emptyState").style.display = "block";
+    document.getElementById("heroSection").style.display = "none";
+  } else {
+    document.getElementById("emptyState").style.display = "none";
+    document.getElementById("heroSection").style.display = "block";
+    buildFilters();
+    renderHero();
+    render();
+  }
+  updateStats();
+}
+
+async function scanLibrary() {
+  const btn = document.getElementById("scanBtn");
+  btn.textContent = "Scanning...";
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/scan`, { method: "POST" });
+    const data = await res.json();
+    btn.textContent = `Found ${data.new} new`;
+    setTimeout(() => { btn.textContent = "Scan Library"; btn.disabled = false; }, 2000);
+    init();
+  } catch(e) {
+    btn.textContent = "Error";
+    setTimeout(() => { btn.textContent = "Scan Library"; btn.disabled = false; }, 2000);
+  }
+}
+
+async function updateStats() {
+  const res = await fetch(`${API}/stats`);
+  const data = await res.json();
+  document.getElementById("statsText").textContent = `${data.total} tracks · ${data.no_genre} untagged`;
+}
+
+// ── Filters ──
+async function buildFilters() {
+  const res = await fetch(`${API}/tags`);
+  const data = await res.json();
+  const bar = document.getElementById("filterBar");
+  // Keep "All" and "No Genre"
+  bar.innerHTML = `<div class="filter-chip active" data-genre="" onclick="filterGenre(this)">All <span class="count">${allTracks.length}</span></div>`;
+  bar.innerHTML += `<div class="filter-chip" data-genre="__none__" onclick="filterGenre(this)">No Genre <span class="count">${allTracks.filter(t=>!t.genre).length}</span></div>`;
+
+  for (const g of data.genres) {
+    const count = allTracks.filter(t => t.genre === g).length;
+    bar.innerHTML += `<div class="filter-chip" data-genre="${esc(g)}" onclick="filterGenre(this)">${esc(g)} <span class="count">${count}</span></div>`;
+  }
+
+  if (data.custom_tags.length) {
+    bar.innerHTML += `<div style="width:1px;height:20px;background:#333;flex-shrink:0;margin:0 4px"></div>`;
+    for (const t of data.custom_tags) {
+      bar.innerHTML += `<div class="filter-chip" data-tag="${esc(t)}" onclick="filterTag(this)">#${esc(t)}</div>`;
+    }
+  }
+}
+
+function filterGenre(el) {
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  currentGenre = el.dataset.genre || "";
+  applyFilters();
+}
+
+function filterTag(el) {
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  currentGenre = "";
+  const tag = el.dataset.tag;
+  filteredTracks = allTracks.filter(t => (t.custom_tags || []).includes(tag));
+  render();
+}
+
+function applyFilters() {
+  filteredTracks = allTracks;
+  if (currentGenre === "__none__") {
+    filteredTracks = filteredTracks.filter(t => !t.genre);
+  } else if (currentGenre) {
+    filteredTracks = filteredTracks.filter(t => t.genre === currentGenre);
+  }
+  if (currentSearch) {
+    const q = currentSearch.toLowerCase();
+    filteredTracks = filteredTracks.filter(t => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q));
+  }
+  render();
+}
+
+let searchTimer;
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentSearch = document.getElementById("searchInput").value.trim();
+    applyFilters();
+  }, 200);
+}
+
+// ── Views ──
+function setView(v) {
+  currentView = v;
+  document.getElementById("viewGrid").classList.toggle("active", v === "grid");
+  document.getElementById("viewList").classList.toggle("active", v === "list");
+  render();
+}
+
+function renderHero() {
+  const carousel = document.getElementById("heroCarousel");
+  // Show tracks with cover art first, shuffled
+  const withCover = allTracks.filter(t => t.cover).sort(() => Math.random() - .5).slice(0, 30);
+  const rest = allTracks.filter(t => !t.cover).sort(() => Math.random() - .5).slice(0, 10);
+  const hero = [...withCover, ...rest].slice(0, 30);
+
+  carousel.innerHTML = hero.map(t => `
+    <div class="hero-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')">
+      <div class="art">
+        ${t.cover ? `<img src="${t.cover}" loading="lazy">` : `<div class="no-art">♫</div>`}
+        <div class="play-overlay"></div>
+      </div>
+      <div class="meta">
+        <div class="title">${esc(t.title)}</div>
+        <div class="artist">${esc(t.artist)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function render() {
+  if (currentView === "grid") {
+    document.getElementById("mainGrid").style.display = "grid";
+    document.getElementById("mainList").style.display = "none";
+    renderGrid();
+  } else {
+    document.getElementById("mainGrid").style.display = "none";
+    document.getElementById("mainList").style.display = "block";
+    renderList();
+  }
+}
+
+function renderGrid() {
+  const el = document.getElementById("mainGrid");
+  el.innerHTML = filteredTracks.map(t => `
+    <div class="grid-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')">
+      <div class="art">
+        ${t.cover ? `<img src="${t.cover}" loading="lazy">` : `<div class="no-art">♫</div>`}
+        <div class="play-overlay"></div>
+      </div>
+      <div class="meta">
+        <div class="title">${esc(t.title)}</div>
+        <div class="artist">${esc(t.artist)}</div>
+        ${t.genre ? `<span class="genre-tag">${esc(t.genre)}</span>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderList() {
+  const el = document.getElementById("mainList");
+  let html = `<div class="list-header"><span></span><span>Title</span><span>Artist</span><span>Genre</span><span>Tags</span><span>Time</span></div>`;
+  html += filteredTracks.map(t => `
+    <div class="list-row${currentTrack?.id===t.id?' playing':''}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')">
+      <div class="art">${t.cover ? `<img src="${t.cover}" loading="lazy">` : `<div class="no-art">♫</div>`}</div>
+      <div class="title">${esc(t.title)}</div>
+      <div class="artist">${esc(t.artist)}</div>
+      <input class="genre-editable" value="${esc(t.genre)}" onclick="event.stopPropagation()" onchange="quickGenre('${t.id}',this.value)" placeholder="+ genre">
+      <div class="tags-cell">${(t.custom_tags||[]).map(tg=>`<span class="custom-tag">${esc(tg)}</span>`).join("")}</div>
+      <div class="duration">${formatTime(t.duration)}</div>
+    </div>
+  `).join("");
+  el.innerHTML = html;
+}
+
+// ── Quick genre edit (inline) ──
+async function quickGenre(id, genre) {
+  await fetch(`${API}/tracks/${id}`, { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({genre}) });
+  const t = allTracks.find(t => t.id === id);
+  if (t) t.genre = genre;
+  buildFilters();
+  updateStats();
+}
+
+// ── Tag modal ──
+function openTagModal(id) {
+  const t = allTracks.find(t => t.id === id);
+  if (!t) return;
+  editingTrackId = id;
+  editCustomTags = [...(t.custom_tags || [])];
+  document.getElementById("editTitle").value = t.title;
+  document.getElementById("editArtist").value = t.artist;
+  document.getElementById("editGenre").value = t.genre;
+
+  // Populate genre datalist
+  const genres = [...new Set(allTracks.map(t => t.genre).filter(Boolean))];
+  document.getElementById("genreList").innerHTML = genres.map(g => `<option value="${g}">`).join("");
+
+  renderEditTags();
+  document.getElementById("tagModal").classList.add("active");
+}
+
+function closeTagModal() {
+  document.getElementById("tagModal").classList.remove("active");
+  editingTrackId = null;
+}
+
+function renderEditTags() {
+  document.getElementById("editTags").innerHTML = editCustomTags.map((t, i) =>
+    `<div class="tag-pill">${esc(t)} <span class="remove" onclick="removeCustomTag(${i})">×</span></div>`
+  ).join("");
+}
+
+function addCustomTag() {
+  const input = document.getElementById("newTagInput");
+  const val = input.value.trim();
+  if (val && !editCustomTags.includes(val)) {
+    editCustomTags.push(val);
+    renderEditTags();
+  }
+  input.value = "";
+}
+
+function removeCustomTag(i) {
+  editCustomTags.splice(i, 1);
+  renderEditTags();
+}
+
+async function saveTrackEdit() {
+  if (!editingTrackId) return;
+  const data = {
+    title: document.getElementById("editTitle").value.trim(),
+    artist: document.getElementById("editArtist").value.trim(),
+    genre: document.getElementById("editGenre").value.trim(),
+    custom_tags: editCustomTags,
+  };
+  const res = await fetch(`${API}/tracks/${editingTrackId}`, { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data) });
+  const updated = await res.json();
+
+  const idx = allTracks.findIndex(t => t.id === editingTrackId);
+  if (idx >= 0) Object.assign(allTracks[idx], updated);
+
+  closeTagModal();
+  buildFilters();
+  applyFilters();
+  updateStats();
+}
+
+// ── Player ──
+function playTrack(id) {
+  const t = allTracks.find(t => t.id === id);
+  if (!t) return;
+  currentTrack = t;
+
+  audioEl.src = `${API}/audio?path=${encodeURIComponent(t.path)}`;
+  audioEl.play();
+  isPlaying = true;
+
+  document.getElementById("player").classList.add("active");
+  document.getElementById("playerTitle").textContent = t.title;
+  document.getElementById("playerArtist").textContent = t.artist;
+  document.getElementById("playerArt").innerHTML = t.cover ? `<img src="${t.cover}">` : "";
+  updatePlayerBtn();
+  render(); // highlight playing row
+
+  if (animId) cancelAnimationFrame(animId);
+  tickPlayer();
+}
+
+function togglePlayerPlay() {
+  if (isPlaying) { audioEl.pause(); isPlaying = false; }
+  else { audioEl.play(); isPlaying = true; }
+  updatePlayerBtn();
+}
+
+function updatePlayerBtn() {
+  document.getElementById("pPlayIcon").style.display = isPlaying ? "none" : "block";
+  document.getElementById("pPauseIcon").style.display = isPlaying ? "block" : "none";
+}
+
+function tickPlayer() {
+  const cur = audioEl.currentTime;
+  const dur = audioEl.duration || 1;
+  document.getElementById("playerBar").style.width = (cur / dur * 100) + "%";
+  document.getElementById("playerTime").textContent = `${formatTime(cur)} / ${formatTime(dur)}`;
+  animId = requestAnimationFrame(tickPlayer);
+}
+
+function seekPlayer(e) {
+  const rect = document.getElementById("playerProgress").getBoundingClientRect();
+  const ratio = (e.clientX - rect.left) / rect.width;
+  audioEl.currentTime = ratio * audioEl.duration;
+}
+
+audioEl.addEventListener("ended", () => {
+  isPlaying = false;
+  updatePlayerBtn();
+  // Auto-play next
+  if (currentTrack) {
+    const idx = filteredTracks.findIndex(t => t.id === currentTrack.id);
+    if (idx >= 0 && idx < filteredTracks.length - 1) {
+      playTrack(filteredTracks[idx + 1].id);
+    }
+  }
+});
+
+// ── Utils ──
+function formatTime(s) { if (!s || isNaN(s)) return "0:00"; const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m}:${sec.toString().padStart(2,"0")}`; }
+function esc(s) { if (!s) return ""; const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+init();
+</script>
+</body>
+</html>

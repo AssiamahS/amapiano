@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+covers/
+uploads/
+library.json
+*.pyc
