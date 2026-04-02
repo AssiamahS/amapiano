@@ -355,7 +355,8 @@ def get_tracks():
     elif genre:
         tracks = [t for t in tracks if t.get("genre", "").lower() == genre.lower()]
     if tag:
-        tracks = [t for t in tracks if tag in t.get("custom_tags", [])]
+        tag_q = tag.lower()
+        tracks = [t for t in tracks if any(tag_q in ct.lower() for ct in t.get("custom_tags", []))]
     if flag:
         tracks = [t for t in tracks if flag in t.get("flags", [])]
 
