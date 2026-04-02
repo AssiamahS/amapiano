@@ -348,7 +348,7 @@ def get_tracks():
 
     if q:
         words = q.split()
-        tracks = [t for t in tracks if any(
+        tracks = [t for t in tracks if all(
             w in t["title"].lower() or w in t["artist"].lower() for w in words
         )]
     if genre == "__none__":
