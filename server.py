@@ -842,15 +842,18 @@ def _run_download(download_id, url, playlist_name):
                     with _download_lock:
                         _downloads[download_id]["progress"] = f"{i+1}/{len(track_urls)}"
                     r = subprocess.run(
-                        ["/Users/djsly/.local/bin/spotdl", "download", track_url,
-                         "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
+                        ["/Users/djsly/.local/bin/spotdl",
+                         "download", track_url,
+                         "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
                          "--max-retries", "3", "--user-auth", "--headless",
-                         "--overwrite", "force"],
+                         "--overwrite", "force", "--format", "mp3",
+                         "--bitrate", "128k"],
                         capture_output=True, text=True, timeout=300,
                         cwd=str(output_dir)
                     )
+                    print(f"[spotdl] track {i+1}: rc={r.returncode} stdout={r.stdout[:200]} stderr={r.stderr[:200]}", flush=True)
                     if r.returncode != 0:
-                        errors.append(r.stderr[:100])
+                        errors.append(r.stderr[:100] or r.stdout[:100])
                 # Build a fake result for downstream compat
                 class _Result:
                     returncode = 0 if not errors else 1
@@ -860,19 +863,24 @@ def _run_download(download_id, url, playlist_name):
             else:
                 # Fallback: try spotdl directly (single track or scrape failed)
                 result = subprocess.run(
-                    ["/Users/djsly/.local/bin/spotdl", "download", url,
-                     "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
-                     "--max-retries", "5", "--user-auth", "--headless"],
-                    capture_output=True, text=True, timeout=1200
+                    ["/Users/djsly/.local/bin/spotdl",
+                     "download", url,
+                     "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
+                     "--max-retries", "5", "--user-auth", "--headless",
+                     "--overwrite", "force", "--format", "mp3", "--bitrate", "128k"],
+                    capture_output=True, text=True, timeout=1200,
+                    cwd=str(output_dir)
                 )
         elif "spotify.com" in url:
             # Single track — spotdl handles these fine
-            result = subprocess.run(
-                ["/Users/djsly/.local/bin/spotdl", "download", url,
-                 "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
-                 "--max-retries", "5", "--user-auth", "--headless"],
-                capture_output=True, text=True, timeout=1200
-            )
+            cmd = ["/Users/djsly/.local/bin/spotdl",
+                 "download", url,
+                 "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
+                 "--max-retries", "5", "--user-auth", "--headless",
+                 "--overwrite", "force", "--format", "mp3", "--bitrate", "128k"]
+            print(f"[spotdl-single] cmd={' '.join(cmd)}", flush=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=1200, cwd=str(output_dir))
+            print(f"[spotdl-single] rc={result.returncode} stdout={result.stdout[:300]} stderr={result.stderr[:300]}", flush=True)
         else:
             # Use yt-dlp for SoundCloud, YouTube, etc
             result = subprocess.run(
