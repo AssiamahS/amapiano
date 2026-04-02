@@ -7,6 +7,8 @@ import re
 import hashlib
 import struct
 import time
+import urllib.request
+import urllib.parse
 from pathlib import Path
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -836,8 +838,31 @@ def _run_download(download_id, url, playlist_name):
 
 
 def _fetch_playlist_name(url):
-    """Get playlist/album name from any URL using yt-dlp or Spotify API."""
-    # Try yt-dlp first — works for SoundCloud, YouTube, and most URLs
+    """Get playlist/album name from any URL by scraping page title or yt-dlp."""
+    # Spotify — scrape page title (works for ALL playlists including editorial)
+    _ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+
+    if "spotify.com" in url or "soundcloud.com" in url:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": _ua, "Accept-Language": "en-US"})
+            html = urllib.request.urlopen(req, timeout=10).read().decode()
+            start = html.find("<title>") + 7
+            end = html.find("</title>")
+            if start > 6 and end > start:
+                title = html[start:end]
+                # Strip common suffixes
+                for sep in [" | Spotify Playlist", " | Spotify", " - playlist by ",
+                            " - Album by ", " - song and lyrics", " - Single by ",
+                            " | Free Listening", " | SoundCloud", " on SoundCloud"]:
+                    if sep in title:
+                        title = title.split(sep)[0]
+                title = title.strip()
+                if title:
+                    return title
+        except Exception as e:
+            print(f"[resolve-name] scrape error for {url}: {e}", flush=True)
+
+    # YouTube / everything else — yt-dlp
     try:
         result = subprocess.run(
             ["yt-dlp", "--flat-playlist", "--print", "playlist_title", "-I", "1", url],
@@ -848,23 +873,6 @@ def _fetch_playlist_name(url):
             return name
     except Exception:
         pass
-
-    # Try Spotify API for Spotify URLs
-    if "spotify.com" in url:
-        try:
-            import urllib.parse
-            path = urllib.parse.urlparse(url).path
-            parts = path.strip("/").split("/")
-            if len(parts) >= 2 and parts[0] in ("playlist", "album"):
-                token = get_spotify_token()
-                req = urllib.request.Request(
-                    f"https://api.spotify.com/v1/{parts[0]}s/{parts[1].split('?')[0]}",
-                    headers={"Authorization": f"Bearer {token}"},
-                )
-                data = json.loads(urllib.request.urlopen(req, timeout=10).read())
-                return data.get("name", "")
-        except Exception:
-            pass
 
     return ""
 
