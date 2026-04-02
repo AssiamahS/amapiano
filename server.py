@@ -842,7 +842,7 @@ def _fetch_playlist_name(url):
     # Spotify — scrape page title (works for ALL playlists including editorial)
     _ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
-    if "spotify.com" in url or "soundcloud.com" in url:
+    if "spotify.com" in url or "soundcloud.com" in url or "on.soundcloud.com" in url:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": _ua, "Accept-Language": "en-US"})
             html = urllib.request.urlopen(req, timeout=10).read().decode()
@@ -851,11 +851,16 @@ def _fetch_playlist_name(url):
             if start > 6 and end > start:
                 title = html[start:end]
                 # Strip common suffixes
-                for sep in [" | Spotify Playlist", " | Spotify", " - playlist by ",
-                            " - Album by ", " - song and lyrics", " - Single by ",
-                            " | Free Listening", " | SoundCloud", " on SoundCloud"]:
-                    if sep in title:
-                        title = title.split(sep)[0]
+                # SoundCloud: "Stream X | Listen to Y playlist online..." → Y
+                if "Listen to " in title and " playlist" in title:
+                    title = title.split("Listen to ")[1].split(" playlist")[0]
+                else:
+                    for sep in [" | Spotify Playlist", " | Spotify", " - playlist by ",
+                                " - Album by ", " - song and lyrics", " - Single by ",
+                                " | Free Listening", " | SoundCloud", " on SoundCloud",
+                                "Stream ", " | Listen to "]:
+                        if sep in title:
+                            title = title.split(sep)[-1] if sep == "Stream " else title.split(sep)[0]
                 title = title.strip()
                 if title:
                     return title
