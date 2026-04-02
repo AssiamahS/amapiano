@@ -347,7 +347,10 @@ def get_tracks():
     flag = request.args.get("flag", "")
 
     if q:
-        tracks = [t for t in tracks if q in t["title"].lower() or q in t["artist"].lower()]
+        words = q.split()
+        tracks = [t for t in tracks if all(
+            w in t["title"].lower() or w in t["artist"].lower() for w in words
+        )]
     if genre == "__none__":
         tracks = [t for t in tracks if not t.get("genre")]
     elif genre:
