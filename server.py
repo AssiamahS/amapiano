@@ -772,11 +772,11 @@ def _run_download(download_id, url, playlist_name):
             _downloads[download_id]["status"] = "downloading"
 
         if "spotify.com" in url:
-            # Use spotdl for Spotify — retry on rate limit
+            # Use spotdl with user-auth to bypass API rate limits
             result = subprocess.run(
                 ["/Users/djsly/.local/bin/spotdl", "download", url,
                  "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
-                 "--max-retries", "10"],
+                 "--max-retries", "5", "--user-auth", "--headless"],
                 capture_output=True, text=True, timeout=1200
             )
         else:
