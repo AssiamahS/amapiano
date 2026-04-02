@@ -844,8 +844,10 @@ def _run_download(download_id, url, playlist_name):
                     r = subprocess.run(
                         ["/Users/djsly/.local/bin/spotdl", "download", track_url,
                          "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
-                         "--max-retries", "3", "--user-auth", "--headless"],
-                        capture_output=True, text=True, timeout=120
+                         "--max-retries", "3", "--user-auth", "--headless",
+                         "--overwrite", "force"],
+                        capture_output=True, text=True, timeout=300,
+                        cwd=str(output_dir)
                     )
                     if r.returncode != 0:
                         errors.append(r.stderr[:100])
