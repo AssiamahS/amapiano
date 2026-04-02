@@ -770,12 +770,12 @@ def _run_download(download_id, url, playlist_name):
             _downloads[download_id]["status"] = "downloading"
 
         if "spotify.com" in url:
-            # Use spotdl with user-auth for Spotify
+            # Use spotdl for Spotify — retry on rate limit
             result = subprocess.run(
                 ["/Users/djsly/.local/bin/spotdl", "download", url,
                  "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
-                 "--max-retries", "5", "--user-auth"],
-                capture_output=True, text=True, timeout=900
+                 "--max-retries", "10"],
+                capture_output=True, text=True, timeout=1200
             )
         else:
             # Use yt-dlp for SoundCloud, YouTube, etc
@@ -835,25 +835,37 @@ def _run_download(download_id, url, playlist_name):
             _downloads[download_id]["error"] = str(e)
 
 
-def _fetch_spotify_playlist_name(url):
-    """Try to get playlist/album name from Spotify URL."""
+def _fetch_playlist_name(url):
+    """Get playlist/album name from any URL using yt-dlp or Spotify API."""
+    # Try yt-dlp first — works for SoundCloud, YouTube, and most URLs
     try:
-        import urllib.parse
-        # Extract playlist/album ID from URL
-        path = urllib.parse.urlparse(url).path
-        parts = path.strip("/").split("/")
-        if len(parts) >= 2 and parts[0] in ("playlist", "album"):
-            item_type = parts[0]
-            item_id = parts[1].split("?")[0]
-            token = get_spotify_token()
-            req = urllib.request.Request(
-                f"https://api.spotify.com/v1/{item_type}s/{item_id}",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            data = json.loads(urllib.request.urlopen(req, timeout=10).read())
-            return data.get("name", "")
+        result = subprocess.run(
+            ["yt-dlp", "--flat-playlist", "--print", "playlist_title", "-I", "1", url],
+            capture_output=True, text=True, timeout=15
+        )
+        name = result.stdout.strip().split("\n")[0].strip()
+        if name and name != "NA":
+            return name
     except Exception:
         pass
+
+    # Try Spotify API for Spotify URLs
+    if "spotify.com" in url:
+        try:
+            import urllib.parse
+            path = urllib.parse.urlparse(url).path
+            parts = path.strip("/").split("/")
+            if len(parts) >= 2 and parts[0] in ("playlist", "album"):
+                token = get_spotify_token()
+                req = urllib.request.Request(
+                    f"https://api.spotify.com/v1/{parts[0]}s/{parts[1].split('?')[0]}",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                data = json.loads(urllib.request.urlopen(req, timeout=10).read())
+                return data.get("name", "")
+        except Exception:
+            pass
+
     return ""
 
 
@@ -862,9 +874,7 @@ def resolve_name():
     """Resolve playlist/album name from URL."""
     data = request.json
     url = data.get("url", "").strip()
-    name = ""
-    if "spotify.com" in url:
-        name = _fetch_spotify_playlist_name(url)
+    name = _fetch_playlist_name(url)
     return jsonify({"name": name})
 
 
@@ -875,9 +885,9 @@ def start_download():
     url = data.get("url", "").strip()
     name = data.get("name", "").strip()
 
-    # Auto-fetch playlist name from Spotify if not provided
-    if not name and "spotify.com" in url:
-        name = _fetch_spotify_playlist_name(url)
+    # Auto-fetch playlist name if not provided
+    if not name:
+        name = _fetch_playlist_name(url)
     if not name:
         name = "Downloads"
 
