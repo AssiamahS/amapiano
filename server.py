@@ -1104,6 +1104,53 @@ def list_downloads():
         return jsonify({"downloads": list(_downloads.values())})
 
 
+def _startup_resync():
+    """On startup, ensure every folder in yt-dlp has tracks in library, a playlist, and a Serato crate."""
+    music_dir = Path.home() / "Music" / "yt-dlp"
+    if not music_dir.exists():
+        return
+    db = load_db()
+    synced = 0
+    for folder in sorted(music_dir.iterdir()):
+        if not folder.is_dir():
+            continue
+        files = [f for f in folder.iterdir() if f.suffix.lower() in AUDIO_EXTS]
+        if not files:
+            continue
+        # Scan any missing tracks into library
+        new_ids = []
+        for f in files:
+            fid = file_id(str(f))
+            if fid not in db["tracks"]:
+                track = scan_track(str(f))
+                if track:
+                    db["tracks"][fid] = track
+                    new_ids.append(fid)
+            else:
+                new_ids.append(fid)
+        if not new_ids:
+            # All tracks already known, just collect IDs
+            new_ids = [file_id(str(f)) for f in files if file_id(str(f)) in db["tracks"]]
+        # Ensure playlist exists with track IDs
+        pid = hashlib.md5(folder.name.encode()).hexdigest()[:10]
+        if "playlists" not in db:
+            db["playlists"] = {}
+        if pid not in db["playlists"] or len(db["playlists"][pid].get("track_ids", [])) == 0:
+            db["playlists"][pid] = {"name": folder.name, "track_ids": new_ids}
+            synced += 1
+        # Ensure Serato crate exists
+        crate_path = SERATO_DIR / f"{folder.name}.crate"
+        if not crate_path.exists():
+            _write_crate(folder.name, [str(f) for f in sorted(files)])
+            synced += 1
+    if synced:
+        save_db(db)
+        print(f"[startup] Resynced {synced} playlists/crates")
+    else:
+        print("[startup] All playlists/crates in sync")
+
+
 if __name__ == "__main__":
+    _startup_resync()
     print("Amapiano Music Library v2 at http://localhost:8766")
     app.run(host="0.0.0.0", port=8766, debug=False)
