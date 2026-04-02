@@ -784,7 +784,7 @@ def _run_download(download_id, url, playlist_name):
             result = subprocess.run(
                 ["yt-dlp", "-x", "--audio-format", "mp3",
                  "--audio-quality", "0",
-                 "-o", str(output_dir / "%(artist)s - %(title)s.%(ext)s"),
+                 "-o", str(output_dir / "%(uploader)s - %(title)s.%(ext)s"),
                  "--no-playlist" if "/track" in url else "--yes-playlist",
                  url],
                 capture_output=True, text=True, timeout=900
