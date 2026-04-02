@@ -6,6 +6,7 @@ import os
 import re
 import hashlib
 import struct
+import time
 from pathlib import Path
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -32,8 +33,8 @@ SERATO_DIR = Path.home() / "Music" / "_Serato_" / "Subcrates"
 SERATO_BACKUP = Path.home() / "Music" / "_Serato_Backup" / "Subcrates"
 
 # Spotify credentials from spotdl
-SPOTIFY_ID = "404dff93f11b42459494f3389da74c4f"
-SPOTIFY_SECRET = "883ea3b54c224c52a42c8205aaff74a2"
+SPOTIFY_ID = "50509b8c6608434fbb2c86dd8cfdaf90"
+SPOTIFY_SECRET = "36bb45f66ab447fe971a17cafb48dbeb"
 _spotify_token = {"token": None, "expires": 0}
 
 
@@ -204,6 +205,95 @@ def parse_serato_crate(crate_path):
 @app.route("/")
 def index():
     return send_from_directory("public", "index.html")
+
+
+@app.route("/downloads")
+def downloads_page():
+    return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amapiano Downloads</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;max-width:800px;margin:0 auto}
+h1{font-size:24px;font-weight:700;color:#ff5500;margin-bottom:20px}
+.input-group{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;padding:16px;background:#111;border-radius:12px;border:1px solid #222}
+input{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#eee;font-size:14px;outline:none;width:100%}
+input:focus{border-color:#ff5500}
+.btn{background:#ff5500;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{background:#e64d00}
+.btn:disabled{background:#333;cursor:not-allowed;color:#666}
+.dl-item{padding:14px;background:#111;border-radius:8px;border:1px solid #222;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.dl-status{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;flex-shrink:0}
+.dl-status.queued{background:#333;color:#888}
+.dl-status.downloading{background:#331a00;color:#ff5500}
+.dl-status.done{background:#0a2a0a;color:#4c4}
+.dl-status.error{background:#2a0a0a;color:#f44}
+.dl-info{flex:1;min-width:0}
+.dl-name{font-weight:600;font-size:14px}
+.dl-url{font-size:11px;color:#555;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl-detail{font-size:11px;margin-top:3px}
+.dl-detail.ok{color:#4c4}
+.dl-detail.err{color:#f44}
+.empty{color:#444;text-align:center;padding:40px;font-size:14px}
+.resolving{font-size:12px;color:#ff5500}
+</style></head><body>
+<h1>Amapiano Downloads</h1>
+<div class="input-group">
+  <input id="urlInput" placeholder="Paste Spotify, SoundCloud, or YouTube URL" autocomplete="off">
+  <div style="display:flex;gap:10px;align-items:center">
+    <input id="nameInput" placeholder="Playlist name (auto-detected)">
+    <span class="resolving" id="resolving" style="display:none">Fetching...</span>
+  </div>
+  <button class="btn" id="dlBtn" onclick="startDl()">Download</button>
+</div>
+<div id="list"><div class="empty">No downloads yet</div></div>
+<script>
+const API='/api';
+let polling;
+document.getElementById('urlInput').addEventListener('input',async e=>{
+  const url=e.target.value.trim();
+  if(url.includes('spotify.com')){
+    document.getElementById('resolving').style.display='inline';
+    try{
+      const r=await fetch(API+'/resolve-name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+      const d=await r.json();
+      if(d.name&&!document.getElementById('nameInput').value)document.getElementById('nameInput').value=d.name;
+    }catch(e){}
+    document.getElementById('resolving').style.display='none';
+  }
+});
+async function startDl(){
+  const url=document.getElementById('urlInput').value.trim();
+  if(!url)return;
+  const name=document.getElementById('nameInput').value.trim()||'';
+  document.getElementById('dlBtn').disabled=true;
+  await fetch(API+'/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,name})});
+  document.getElementById('urlInput').value='';
+  document.getElementById('nameInput').value='';
+  document.getElementById('dlBtn').disabled=false;
+  poll();
+}
+async function poll(){
+  try{
+    const r=await fetch(API+'/downloads');
+    const d=await r.json();
+    const list=document.getElementById('list');
+    if(!d.downloads.length){list.innerHTML='<div class="empty">No downloads yet</div>';return;}
+    list.innerHTML=d.downloads.map(dl=>`<div class="dl-item">
+      <span class="dl-status ${dl.status}">${dl.status}</span>
+      <div class="dl-info">
+        <div class="dl-name">${esc(dl.name)}</div>
+        <div class="dl-url">${esc(dl.url)}</div>
+        ${dl.status==='done'&&dl.new_tracks?`<div class="dl-detail ok">${dl.new_tracks} tracks added</div>`:''}
+        ${dl.error?`<div class="dl-detail err">${esc(dl.error).slice(0,200)}</div>`:''}
+      </div>
+    </div>`).join('');
+  }catch(e){}
+}
+function esc(s){return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;'):''}
+poll();
+polling=setInterval(poll,3000);
+</script></body></html>"""
 
 
 @app.route("/mobile")
@@ -659,6 +749,172 @@ def create_crate():
         return jsonify({"error": "Name required"}), 400
     _write_crate(name, [])
     return jsonify({"created": True, "name": name})
+
+
+# ── Downloads via spotdl ──
+
+import subprocess
+import threading
+
+_downloads = {}  # id -> {status, url, name, tracks: [], error}
+_download_lock = threading.Lock()
+
+
+def _run_download(download_id, url, playlist_name):
+    """Run download in background thread. Uses yt-dlp for most, spotdl for Spotify."""
+    safe_name = re.sub(r'[^\w\s\-]', '', playlist_name).strip() or "Downloads"
+    output_dir = Path.home() / "Music" / "yt-dlp" / safe_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with _download_lock:
+            _downloads[download_id]["status"] = "downloading"
+
+        if "spotify.com" in url:
+            # Use spotdl with user-auth for Spotify
+            result = subprocess.run(
+                ["/Users/djsly/.local/bin/spotdl", "download", url,
+                 "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
+                 "--max-retries", "5", "--user-auth"],
+                capture_output=True, text=True, timeout=900
+            )
+        else:
+            # Use yt-dlp for SoundCloud, YouTube, etc
+            result = subprocess.run(
+                ["yt-dlp", "-x", "--audio-format", "mp3",
+                 "--audio-quality", "0",
+                 "-o", str(output_dir / "%(artist)s - %(title)s.%(ext)s"),
+                 "--no-playlist" if "/track" in url else "--yes-playlist",
+                 url],
+                capture_output=True, text=True, timeout=900
+            )
+
+        # Scan new files in this playlist folder
+        db = load_db()
+        new_tracks = []
+        for root, dirs, files in os.walk(str(output_dir)):
+            for f in files:
+                if Path(f).suffix.lower() not in AUDIO_EXTS:
+                    continue
+                filepath = os.path.join(root, f)
+                fid = file_id(filepath)
+                if fid not in db["tracks"]:
+                    track = scan_track(filepath)
+                    if track:
+                        db["tracks"][fid] = track
+                        new_tracks.append(fid)
+
+        # Create playlist from downloaded tracks if we got any
+        if new_tracks and playlist_name:
+            pid = hashlib.md5(playlist_name.encode()).hexdigest()[:10]
+            if "playlists" not in db:
+                db["playlists"] = {}
+            if pid in db["playlists"]:
+                # Add to existing
+                existing = db["playlists"][pid].get("track_ids", [])
+                for tid in new_tracks:
+                    if tid not in existing:
+                        existing.append(tid)
+                db["playlists"][pid]["track_ids"] = existing
+            else:
+                db["playlists"][pid] = {"name": playlist_name, "track_ids": new_tracks}
+            # Auto-export to Serato
+            tracks = [db["tracks"][tid] for tid in db["playlists"][pid]["track_ids"] if tid in db["tracks"]]
+            crate_name = playlist_name.replace(" > ", "%%")
+            _write_crate(playlist_name, [t["path"] for t in tracks])
+
+        save_db(db)
+
+        with _download_lock:
+            _downloads[download_id]["status"] = "done"
+            _downloads[download_id]["new_tracks"] = len(new_tracks)
+            if result.returncode != 0:
+                _downloads[download_id]["error"] = result.stderr[:500]
+    except Exception as e:
+        with _download_lock:
+            _downloads[download_id]["status"] = "error"
+            _downloads[download_id]["error"] = str(e)
+
+
+def _fetch_spotify_playlist_name(url):
+    """Try to get playlist/album name from Spotify URL."""
+    try:
+        import urllib.parse
+        # Extract playlist/album ID from URL
+        path = urllib.parse.urlparse(url).path
+        parts = path.strip("/").split("/")
+        if len(parts) >= 2 and parts[0] in ("playlist", "album"):
+            item_type = parts[0]
+            item_id = parts[1].split("?")[0]
+            token = get_spotify_token()
+            req = urllib.request.Request(
+                f"https://api.spotify.com/v1/{item_type}s/{item_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            data = json.loads(urllib.request.urlopen(req, timeout=10).read())
+            return data.get("name", "")
+    except Exception:
+        pass
+    return ""
+
+
+@app.route("/api/resolve-name", methods=["POST"])
+def resolve_name():
+    """Resolve playlist/album name from URL."""
+    data = request.json
+    url = data.get("url", "").strip()
+    name = ""
+    if "spotify.com" in url:
+        name = _fetch_spotify_playlist_name(url)
+    return jsonify({"name": name})
+
+
+@app.route("/api/download", methods=["POST"])
+def start_download():
+    """Start a spotdl download. Accepts {url, name}."""
+    data = request.json
+    url = data.get("url", "").strip()
+    name = data.get("name", "").strip()
+
+    # Auto-fetch playlist name from Spotify if not provided
+    if not name and "spotify.com" in url:
+        name = _fetch_spotify_playlist_name(url)
+    if not name:
+        name = "Downloads"
+
+    if not url:
+        return jsonify({"error": "URL required"}), 400
+
+    download_id = hashlib.md5(f"{url}{time.time()}".encode()).hexdigest()[:10]
+    with _download_lock:
+        _downloads[download_id] = {
+            "id": download_id,
+            "status": "queued",
+            "url": url,
+            "name": name,
+            "new_tracks": 0,
+            "error": None,
+        }
+
+    thread = threading.Thread(target=_run_download, args=(download_id, url, name))
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({"id": download_id, "status": "queued", "name": name})
+
+
+@app.route("/api/download/<download_id>")
+def download_status(download_id):
+    with _download_lock:
+        dl = _downloads.get(download_id)
+    if not dl:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(dl)
+
+
+@app.route("/api/downloads")
+def list_downloads():
+    with _download_lock:
+        return jsonify({"downloads": list(_downloads.values())})
 
 
 if __name__ == "__main__":
