@@ -27,6 +27,7 @@ DB_FILE = Path(__file__).parent / "library.json"
 COVERS_DIR = Path(__file__).parent / "covers"
 COVERS_DIR.mkdir(exist_ok=True)
 
+MOBILE_DIR = Path(__file__).parent.parent / "amapiano-iphone"
 SERATO_DIR = Path.home() / "Music" / "_Serato_" / "Subcrates"
 SERATO_BACKUP = Path.home() / "Music" / "_Serato_Backup" / "Subcrates"
 
@@ -203,6 +204,16 @@ def parse_serato_crate(crate_path):
 @app.route("/")
 def index():
     return send_from_directory("public", "index.html")
+
+
+@app.route("/mobile")
+def mobile():
+    return send_from_directory(str(MOBILE_DIR), "index.html")
+
+
+@app.route("/mobile/<path:filename>")
+def mobile_static(filename):
+    return send_from_directory(str(MOBILE_DIR), filename)
 
 
 @app.route("/api/scan", methods=["POST"])
@@ -525,6 +536,129 @@ def export_to_serato():
     dest.write_bytes(bytes(buf))
 
     return jsonify({"exported": True, "path": str(dest), "tracks": len(tracks)})
+
+
+# ── Direct Serato crate management ──
+
+def _write_crate(name, track_paths):
+    """Write a Serato .crate file from a list of file paths."""
+    buf = bytearray()
+    ver = "1.0/Serato ScratchLive Crate".encode("utf-16-be")
+    buf += b"vrsn" + struct.pack(">I", len(ver)) + ver
+    for path in track_paths:
+        p = path[1:] if path.startswith("/") else path
+        path_bytes = p.encode("utf-16-be")
+        buf += b"otrk" + struct.pack(">I", len(path_bytes) + 8)
+        buf += b"ptrk" + struct.pack(">I", len(path_bytes)) + path_bytes
+    crate_name = name.replace(" > ", "%%")
+    dest = SERATO_DIR / f"{crate_name}.crate"
+    dest.write_bytes(bytes(buf))
+    return str(dest)
+
+
+@app.route("/api/serato/crates/<path:crate_name>/tracks", methods=["GET"])
+def get_crate_tracks(crate_name):
+    """Get tracks in a Serato crate with full metadata."""
+    real_name = crate_name.replace(" > ", "%%")
+    crate_path = SERATO_DIR / f"{real_name}.crate"
+    if not crate_path.exists():
+        return jsonify({"error": "Crate not found"}), 404
+    file_paths = parse_serato_crate(crate_path)
+    db = load_db()
+    tracks = []
+    for fp in file_paths:
+        fid = file_id(fp)
+        if fid in db["tracks"]:
+            tracks.append(db["tracks"][fid])
+        elif os.path.exists(fp):
+            track = scan_track(fp)
+            if track:
+                db["tracks"][fid] = track
+                tracks.append(track)
+    save_db(db)
+    return jsonify({"name": crate_name, "tracks": tracks})
+
+
+@app.route("/api/serato/crates/<path:crate_name>/add", methods=["POST"])
+def add_to_crate(crate_name):
+    """Add a track to a Serato crate by track ID."""
+    data = request.json
+    tid = data.get("track_id")
+    db = load_db()
+    if tid not in db["tracks"]:
+        return jsonify({"error": "Track not found"}), 404
+    track_path = db["tracks"][tid]["path"]
+
+    real_name = crate_name.replace(" > ", "%%")
+    crate_path = SERATO_DIR / f"{real_name}.crate"
+    existing = parse_serato_crate(crate_path) if crate_path.exists() else []
+
+    if track_path not in existing:
+        existing.append(track_path)
+    _write_crate(crate_name, existing)
+    return jsonify({"added": True, "tracks": len(existing)})
+
+
+@app.route("/api/serato/crates/<path:crate_name>/remove", methods=["POST"])
+def remove_from_crate(crate_name):
+    """Remove a track from a Serato crate."""
+    data = request.json
+    tid = data.get("track_id")
+    db = load_db()
+    if tid not in db["tracks"]:
+        return jsonify({"error": "Track not found"}), 404
+    track_path = db["tracks"][tid]["path"]
+
+    real_name = crate_name.replace(" > ", "%%")
+    crate_path = SERATO_DIR / f"{real_name}.crate"
+    existing = parse_serato_crate(crate_path) if crate_path.exists() else []
+    existing = [p for p in existing if p != track_path]
+    _write_crate(crate_name, existing)
+    return jsonify({"removed": True, "tracks": len(existing)})
+
+
+@app.route("/api/serato/crates/<path:crate_name>/reorder", methods=["POST"])
+def reorder_crate(crate_name):
+    """Reorder tracks in a crate. Expects {"track_ids": [...]} in new order."""
+    data = request.json
+    track_ids = data.get("track_ids", [])
+    db = load_db()
+    paths = []
+    for tid in track_ids:
+        if tid in db["tracks"]:
+            paths.append(db["tracks"][tid]["path"])
+    _write_crate(crate_name, paths)
+    return jsonify({"reordered": True, "tracks": len(paths)})
+
+
+@app.route("/api/serato/crates/<path:crate_name>/rename", methods=["POST"])
+def rename_crate(crate_name):
+    """Rename a Serato crate."""
+    data = request.json
+    new_name = data.get("name", "")
+    if not new_name:
+        return jsonify({"error": "Name required"}), 400
+
+    real_name = crate_name.replace(" > ", "%%")
+    crate_path = SERATO_DIR / f"{real_name}.crate"
+    existing = parse_serato_crate(crate_path) if crate_path.exists() else []
+
+    # Write new, delete old
+    new_path = _write_crate(new_name, existing)
+    if crate_path.exists() and str(crate_path) != new_path:
+        crate_path.unlink()
+    return jsonify({"renamed": True, "old": crate_name, "new": new_name})
+
+
+@app.route("/api/serato/crates/create", methods=["POST"])
+def create_crate():
+    """Create a new empty Serato crate."""
+    data = request.json
+    name = data.get("name", "")
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    _write_crate(name, [])
+    return jsonify({"created": True, "name": name})
 
 
 if __name__ == "__main__":
