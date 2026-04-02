@@ -286,6 +286,7 @@ async function poll(){
       <div class="dl-info">
         <div class="dl-name">${esc(dl.name)}</div>
         <div class="dl-url">${esc(dl.url)}</div>
+        ${dl.status==='downloading'&&dl.progress?`<div class="dl-detail" style="color:#ff5500">Downloading track ${esc(dl.progress)}</div>`:''}
         ${dl.status==='done'&&dl.new_tracks?`<div class="dl-detail ok">${dl.new_tracks} tracks added</div>`:''}
         ${dl.error?`<div class="dl-detail err">${esc(dl.error).slice(0,200)}</div>`:''}
       </div>
@@ -762,6 +763,62 @@ _downloads = {}  # id -> {status, url, name, tracks: [], error}
 _download_lock = threading.Lock()
 
 
+def _scrape_spotify_track_urls(playlist_url):
+    """Scrape track URLs from a Spotify playlist/album page using the embed endpoint."""
+    try:
+        # Extract playlist/album ID and type from URL
+        # e.g. https://open.spotify.com/playlist/18EmXIwVHNGJPLuTvPKeBG
+        import re as _re
+        m = _re.search(r'spotify\.com/(playlist|album)/([a-zA-Z0-9]+)', playlist_url)
+        if not m:
+            return []
+        resource_type, resource_id = m.group(1), m.group(2)
+
+        # Use the Spotify embed API which still returns track data
+        embed_url = f"https://open.spotify.com/embed/{resource_type}/{resource_id}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml",
+        }
+        req = urllib.request.Request(embed_url, headers=headers)
+        html = urllib.request.urlopen(req, timeout=15).read().decode()
+
+        # The embed page contains a <script id="__NEXT_DATA__"> with track info
+        # Or the track URIs are in the HTML as spotify:track:XXXX
+        track_ids = _re.findall(r'spotify:track:([a-zA-Z0-9]{22})', html)
+        # Deduplicate while preserving order
+        seen = set()
+        unique_ids = []
+        for tid in track_ids:
+            if tid not in seen:
+                seen.add(tid)
+                unique_ids.append(tid)
+
+        if unique_ids:
+            print(f"[scrape] Found {len(unique_ids)} tracks from embed for {resource_type}/{resource_id}")
+            return [f"https://open.spotify.com/track/{tid}" for tid in unique_ids]
+
+        # Fallback: try the main page
+        req2 = urllib.request.Request(playlist_url, headers=headers)
+        html2 = urllib.request.urlopen(req2, timeout=15).read().decode()
+        track_ids2 = _re.findall(r'spotify:track:([a-zA-Z0-9]{22})', html2)
+        seen2 = set()
+        unique_ids2 = []
+        for tid in track_ids2:
+            if tid not in seen2:
+                seen2.add(tid)
+                unique_ids2.append(tid)
+        if unique_ids2:
+            print(f"[scrape] Found {len(unique_ids2)} tracks from main page for {resource_type}/{resource_id}")
+            return [f"https://open.spotify.com/track/{tid}" for tid in unique_ids2]
+
+        print(f"[scrape] No tracks found for {playlist_url}")
+        return []
+    except Exception as e:
+        print(f"[scrape] Error scraping {playlist_url}: {e}")
+        return []
+
+
 def _run_download(download_id, url, playlist_name):
     """Run download in background thread. Uses yt-dlp for most, spotdl for Spotify."""
     safe_name = re.sub(r'[^\w\s\-]', '', playlist_name).strip() or "Downloads"
@@ -771,8 +828,39 @@ def _run_download(download_id, url, playlist_name):
         with _download_lock:
             _downloads[download_id]["status"] = "downloading"
 
-        if "spotify.com" in url:
-            # Use spotdl with user-auth to bypass API rate limits
+        if "spotify.com" in url and "/track/" not in url:
+            # Playlist/album: scrape track URLs, then download each individually
+            # (Spotify API blocks /playlists/{id}/tracks for dev-mode apps)
+            track_urls = _scrape_spotify_track_urls(url)
+            if track_urls:
+                errors = []
+                for i, track_url in enumerate(track_urls):
+                    with _download_lock:
+                        _downloads[download_id]["progress"] = f"{i+1}/{len(track_urls)}"
+                    r = subprocess.run(
+                        ["/Users/djsly/.local/bin/spotdl", "download", track_url,
+                         "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
+                         "--max-retries", "3", "--user-auth", "--headless"],
+                        capture_output=True, text=True, timeout=120
+                    )
+                    if r.returncode != 0:
+                        errors.append(r.stderr[:100])
+                # Build a fake result for downstream compat
+                class _Result:
+                    returncode = 0 if not errors else 1
+                    stderr = "; ".join(errors[:3])
+                    stdout = ""
+                result = _Result()
+            else:
+                # Fallback: try spotdl directly (single track or scrape failed)
+                result = subprocess.run(
+                    ["/Users/djsly/.local/bin/spotdl", "download", url,
+                     "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
+                     "--max-retries", "5", "--user-auth", "--headless"],
+                    capture_output=True, text=True, timeout=1200
+                )
+        elif "spotify.com" in url:
+            # Single track — spotdl handles these fine
             result = subprocess.run(
                 ["/Users/djsly/.local/bin/spotdl", "download", url,
                  "--output", str(output_dir / "{artist} - {title}.{output-ext}"),
