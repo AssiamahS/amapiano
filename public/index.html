@@ -413,15 +413,13 @@ function setView(v){
   render();
 }
 
-let heroIds=null;
+let heroDone=false;
 function renderHero(){
+  if(heroDone)return;
   const carousel=document.getElementById("heroCarousel");
-  if(!heroIds){
-    const pick=[...allTracks.filter(t=>t.cover).sort(()=>Math.random()-.5).slice(0,25),...allTracks.filter(t=>!t.cover).sort(()=>Math.random()-.5).slice(0,5)].slice(0,25);
-    heroIds=pick.map(t=>t.id);
-  }
-  const hero=heroIds.map(id=>allTracks.find(t=>t.id===id)).filter(Boolean);
+  const hero=[...allTracks.filter(t=>t.cover).sort(()=>Math.random()-.5).slice(0,25),...allTracks.filter(t=>!t.cover).sort(()=>Math.random()-.5).slice(0,5)].slice(0,25);
   carousel.innerHTML=hero.map(t=>`<div class="hero-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art-wrap">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}${badges(t.flags)}<div class="play-overlay"></div></div><div class="meta"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div></div></div>`).join("");
+  heroDone=true;
 }
 
 function render(){
