@@ -7,6 +7,7 @@ import re
 import hashlib
 import struct
 import time
+import base64
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -137,6 +138,34 @@ def extract_cover(filepath, fid):
     return None
 
 
+def _set_serato_cue1_at_zero(filepath):
+    """Set Serato CUE point #1 (red) at position 0ms if no cue points exist."""
+    try:
+        from mutagen.id3 import ID3, GEOB
+        try:
+            tags = ID3(filepath)
+        except Exception:
+            return
+        if "GEOB:Serato Markers2" in tags:
+            return  # already has markers, don't overwrite
+        # Build Serato Markers2 with CUE #1 at 0ms (red)
+        cue_data = b'\x00\x00'  # padding + index 0
+        cue_data += struct.pack('>I', 0)  # position 0ms
+        cue_data += b'\x00'  # padding
+        cue_data += bytes([0xCC, 0x00, 0x00])  # red
+        cue_data += b'\x00\x00'  # padding
+        cue_data += b'\x00'  # empty name
+        entry = b'CUE\x00' + struct.pack('>I', len(cue_data)) + cue_data
+        bpmlock = b'BPMLOCK\x00' + struct.pack('>I', 1) + b'\x00'
+        payload = base64.b64encode(entry + bpmlock)
+        marker_data = bytes([0x01, 0x01]) + payload
+        tags.add(GEOB(encoding=0, mime='application/octet-stream',
+                       desc='Serato Markers2', data=marker_data))
+        tags.save(filepath)
+    except Exception as e:
+        print(f"[cue] Error setting cue for {filepath}: {e}", flush=True)
+
+
 def scan_track(filepath):
     fid = file_id(filepath)
     name = Path(filepath).stem
@@ -157,6 +186,7 @@ def scan_track(filepath):
 
         cover = extract_cover(filepath, fid)
         flags = classify_title(title)
+        _set_serato_cue1_at_zero(filepath)
 
         return {
             "id": fid,
@@ -767,18 +797,44 @@ _downloads = {}  # id -> {status, url, name, tracks: [], error}
 _download_lock = threading.Lock()
 
 
+def _spotify_embed_info(spotify_url):
+    """Get track name+artist from Spotify embed endpoint (no auth needed)."""
+    import re as _re
+    try:
+        m = _re.search(r'spotify\.com/track/([a-zA-Z0-9]+)', spotify_url)
+        if not m:
+            return None
+        track_id = m.group(1)
+        embed_url = f"https://open.spotify.com/embed/track/{track_id}"
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        req = urllib.request.Request(embed_url, headers=headers)
+        html = urllib.request.urlopen(req, timeout=15).read().decode()
+        import json as _json
+        m2 = _re.search(r'<script id="__NEXT_DATA__"[^>]*>(.+?)</script>', html)
+        if m2:
+            data = _json.loads(m2.group(1))
+            entity = data["props"]["pageProps"]["state"]["data"]["entity"]
+            name = entity["name"]
+            artists = ", ".join(a["name"] for a in entity.get("artists", []))
+            return {"name": name, "artists": artists}
+        # Fallback: regex
+        m3 = _re.search(r'"name":"([^"]+)".*?"artists":\[.*?"name":"([^"]+)"', html)
+        if m3:
+            return {"name": m3.group(1), "artists": m3.group(2)}
+    except Exception as e:
+        print(f"[embed] Error getting info for {spotify_url}: {e}")
+    return None
+
+
 def _scrape_spotify_track_urls(playlist_url):
     """Scrape track URLs from a Spotify playlist/album page using the embed endpoint."""
     try:
-        # Extract playlist/album ID and type from URL
-        # e.g. https://open.spotify.com/playlist/18EmXIwVHNGJPLuTvPKeBG
         import re as _re
         m = _re.search(r'spotify\.com/(playlist|album)/([a-zA-Z0-9]+)', playlist_url)
         if not m:
             return []
         resource_type, resource_id = m.group(1), m.group(2)
 
-        # Use the Spotify embed API which still returns track data
         embed_url = f"https://open.spotify.com/embed/{resource_type}/{resource_id}"
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -787,10 +843,7 @@ def _scrape_spotify_track_urls(playlist_url):
         req = urllib.request.Request(embed_url, headers=headers)
         html = urllib.request.urlopen(req, timeout=15).read().decode()
 
-        # The embed page contains a <script id="__NEXT_DATA__"> with track info
-        # Or the track URIs are in the HTML as spotify:track:XXXX
         track_ids = _re.findall(r'spotify:track:([a-zA-Z0-9]{22})', html)
-        # Deduplicate while preserving order
         seen = set()
         unique_ids = []
         for tid in track_ids:
@@ -823,6 +876,26 @@ def _scrape_spotify_track_urls(playlist_url):
         return []
 
 
+def _download_spotify_track_via_ytdlp(track_url, output_dir):
+    """Download a Spotify track by looking up metadata via embed, then downloading from YouTube."""
+    info = _spotify_embed_info(track_url)
+    if not info:
+        return None, f"Could not get track info for {track_url}"
+    search_query = f"{info['artists']} - {info['name']}"
+    output_template = str(output_dir / f"{info['artists']} - {info['name']}.%(ext)s")
+    result = subprocess.run(
+        ["yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
+         "-o", output_template, "--no-playlist",
+         f"ytsearch1:{search_query} audio"],
+        capture_output=True, text=True, timeout=120
+    )
+    if result.returncode == 0:
+        print(f"[yt-dlp] Downloaded: {search_query}", flush=True)
+    else:
+        print(f"[yt-dlp] Failed: {search_query} — {result.stderr[:200]}", flush=True)
+    return result, None
+
+
 def _run_download(download_id, url, playlist_name):
     """Run download in background thread. Uses yt-dlp for most, spotdl for Spotify."""
     safe_name = re.sub(r'[^\w\s\-]', '', playlist_name).strip() or "Downloads"
@@ -833,54 +906,43 @@ def _run_download(download_id, url, playlist_name):
             _downloads[download_id]["status"] = "downloading"
 
         if "spotify.com" in url and "/track/" not in url:
-            # Playlist/album: scrape track URLs, then download each individually
-            # (Spotify API blocks /playlists/{id}/tracks for dev-mode apps)
+            # Playlist/album: scrape track URLs, then download each via yt-dlp
             track_urls = _scrape_spotify_track_urls(url)
             if track_urls:
                 errors = []
                 for i, track_url in enumerate(track_urls):
                     with _download_lock:
                         _downloads[download_id]["progress"] = f"{i+1}/{len(track_urls)}"
-                    r = subprocess.run(
-                        ["/Users/djsly/.local/bin/spotdl",
-                         "download", track_url,
-                         "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
-                         "--max-retries", "3", "--user-auth", "--headless",
-                         "--overwrite", "force", "--format", "mp3",
-                         "--bitrate", "128k"],
-                        capture_output=True, text=True, timeout=300,
-                        cwd=str(output_dir)
-                    )
-                    print(f"[spotdl] track {i+1}: rc={r.returncode} stdout={r.stdout[:200]} stderr={r.stderr[:200]}", flush=True)
-                    if r.returncode != 0:
+                    r, err = _download_spotify_track_via_ytdlp(track_url, output_dir)
+                    if err:
+                        errors.append(err)
+                    elif r and r.returncode != 0:
                         errors.append(r.stderr[:100] or r.stdout[:100])
-                # Build a fake result for downstream compat
                 class _Result:
                     returncode = 0 if not errors else 1
                     stderr = "; ".join(errors[:3])
                     stdout = ""
                 result = _Result()
             else:
-                # Fallback: try spotdl directly (single track or scrape failed)
+                # Fallback: try yt-dlp with playlist URL directly
                 result = subprocess.run(
-                    ["/Users/djsly/.local/bin/spotdl",
-                     "download", url,
-                     "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
-                     "--max-retries", "5", "--user-auth", "--headless",
-                     "--overwrite", "force", "--format", "mp3", "--bitrate", "128k"],
-                    capture_output=True, text=True, timeout=1200,
-                    cwd=str(output_dir)
+                    ["yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
+                     "-o", str(output_dir / "%(uploader)s - %(title)s.%(ext)s"),
+                     "--yes-playlist", url],
+                    capture_output=True, text=True, timeout=1200
                 )
         elif "spotify.com" in url:
-            # Single track — spotdl handles these fine
-            cmd = ["/Users/djsly/.local/bin/spotdl",
-                 "download", url,
-                 "--output", str(output_dir / "{artists} - {title}.{output-ext}"),
-                 "--max-retries", "5", "--user-auth", "--headless",
-                 "--overwrite", "force", "--format", "mp3", "--bitrate", "128k"]
-            print(f"[spotdl-single] cmd={' '.join(cmd)}", flush=True)
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=1200, cwd=str(output_dir))
-            print(f"[spotdl-single] rc={result.returncode} stdout={result.stdout[:300]} stderr={result.stderr[:300]}", flush=True)
+            # Single Spotify track — resolve via embed, download via yt-dlp
+            r, err = _download_spotify_track_via_ytdlp(url, output_dir)
+            if err:
+                class _Result:
+                    returncode = 1
+                    stderr = err
+                    stdout = ""
+                result = _Result()
+            else:
+                result = r
+            print(f"[spotify-single] done, rc={result.returncode}", flush=True)
         else:
             # Use yt-dlp for SoundCloud, YouTube, etc
             result = subprocess.run(
