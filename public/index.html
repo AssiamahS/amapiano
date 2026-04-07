@@ -648,18 +648,46 @@ const wfCache={};
 let wfData=null,wfCtx=null,wfCanvas=null,wfAudioCtx=null;
 function getAudioCtx(){if(!wfAudioCtx)wfAudioCtx=new(window.AudioContext||window.webkitAudioContext)();return wfAudioCtx}
 function computeWaveform(audioBuffer,bars){
+  const actx=getAudioCtx();
+  const sr=audioBuffer.sampleRate;
   const ch=audioBuffer.getChannelData(0);
-  const step=Math.floor(ch.length/bars);
-  const peaks=new Float32Array(bars);
+  const len=ch.length;
+  const step=Math.floor(len/bars);
+  // FFT size per bar segment
+  const fftSize=2048;
+  const result={peaks:new Float32Array(bars),low:new Float32Array(bars),mid:new Float32Array(bars),high:new Float32Array(bars)};
+  // Frequency bin boundaries
+  const binHz=sr/fftSize;
+  const lowEnd=Math.floor(200/binHz);   // 0-200Hz = bass/kicks
+  const midEnd=Math.floor(2000/binHz);  // 200-2000Hz = vocals/snares
+  // Compute offline FFT per bar
+  const fft=new Float32Array(fftSize);
   for(let i=0;i<bars;i++){
-    let sum=0;
     const off=i*step;
-    for(let j=0;j<step;j++)sum+=Math.abs(ch[off+j]);
-    peaks[i]=sum/step;
+    let sum=0,sumLow=0,sumMid=0,sumHigh=0;
+    // Simple amplitude
+    for(let j=0;j<step&&off+j<len;j++)sum+=Math.abs(ch[off+j]);
+    result.peaks[i]=sum/step;
+    // Quick DFT energy estimate using segments
+    const segLen=Math.min(fftSize,step);
+    for(let j=0;j<segLen;j++)fft[j]=ch[off+j]||0;
+    for(let j=segLen;j<fftSize;j++)fft[j]=0;
+    // Simple energy by frequency band using windowed samples
+    for(let j=0;j<segLen;j++){
+      const s=Math.abs(fft[j]);
+      const freq=(j/segLen)*sr/2;
+      if(freq<200)sumLow+=s;
+      else if(freq<2000)sumMid+=s;
+      else sumHigh+=s;
+    }
+    result.low[i]=sumLow/segLen;
+    result.mid[i]=sumMid/segLen;
+    result.high[i]=sumHigh/segLen;
   }
-  const max=Math.max(...peaks)||1;
-  for(let i=0;i<bars;i++)peaks[i]=peaks[i]/max;
-  return peaks;
+  // Normalize each channel
+  const norm=(arr)=>{const m=Math.max(...arr)||1;for(let i=0;i<arr.length;i++)arr[i]/=m};
+  norm(result.peaks);norm(result.low);norm(result.mid);norm(result.high);
+  return result;
 }
 async function loadWaveform(trackId,path){
   if(wfCache[trackId]){wfData=wfCache[trackId];drawWaveform();return}
@@ -687,7 +715,6 @@ function drawWaveform(){
   const progress=audioEl.duration?(audioEl.currentTime/audioEl.duration):0;
   const playX=progress*w;
   if(!wfData){
-    // fallback: simple progress bar
     wfCtx.fillStyle='#ff5500';
     wfCtx.fillRect(0,h/2-1,playX,2);
     wfCtx.fillStyle='#333';
@@ -695,14 +722,25 @@ function drawWaveform(){
     wfCtx.setTransform(1,0,0,1,0,0);
     return;
   }
-  const bars=wfData.length;
+  const bars=wfData.peaks.length;
   const barW=w/bars;
   const mid=h/2;
   const maxH=h*0.9;
   for(let i=0;i<bars;i++){
     const x=i*barW;
-    const bh=Math.max(1,wfData[i]*maxH/2);
-    wfCtx.fillStyle=x<playX?'#ff5500':'#333';
+    const bh=Math.max(1,wfData.peaks[i]*maxH/2);
+    const lo=wfData.low[i],mi=wfData.mid[i],hi=wfData.high[i];
+    const total=lo+mi+hi||1;
+    // Serato RGB: red=bass, green=mid, blue=high
+    const r=Math.round((lo/total)*255);
+    const g=Math.round((mi/total)*255);
+    const b=Math.round((hi/total)*255);
+    const played=x<playX;
+    if(played){
+      wfCtx.fillStyle=`rgb(${Math.min(255,r+40)},${Math.min(255,g+40)},${Math.min(255,b+40)})`;
+    }else{
+      wfCtx.fillStyle=`rgb(${r>>1},${g>>1},${b>>1})`;
+    }
     wfCtx.fillRect(x,mid-bh,Math.max(1,barW-0.5),bh*2);
   }
   wfCtx.setTransform(1,0,0,1,0,0);
