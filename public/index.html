@@ -452,10 +452,18 @@ function applyFilters(){
 }
 function updateFilteredStats(){
   const el=document.getElementById("statsText");
+  const tracks=currentSearch||currentGenre||currentPlaylistId?filteredTracks:allTracks;
+  const totalSec=tracks.reduce((s,t)=>s+(t.duration||0),0);
+  const totalBytes=tracks.reduce((s,t)=>s+(t.file_size||0),0);
+  const hours=Math.floor(totalSec/3600);
+  const mins=Math.floor((totalSec%3600)/60);
+  const timeStr=hours>0?`${hours}h ${mins}m`:`${mins}m`;
+  let sizeStr='';
+  if(totalBytes>0){const gb=totalBytes/1073741824;sizeStr=gb>=1?` \u00b7 ${gb.toFixed(1)} GB`:` \u00b7 ${(totalBytes/1048576).toFixed(0)} MB`}
   if(currentSearch||currentGenre||currentPlaylistId){
-    el.textContent=`${filteredTracks.length} tracks found`;
+    el.textContent=`${tracks.length} tracks \u00b7 ${timeStr}${sizeStr}`;
   }else{
-    el.textContent=`${allTracks.length} tracks \u00b7 ${allTracks.filter(t=>!t.genre).length} untagged`;
+    el.textContent=`${tracks.length} tracks \u00b7 ${timeStr}${sizeStr} \u00b7 ${allTracks.filter(t=>!t.genre).length} untagged`;
   }
 }
 let searchTimer;

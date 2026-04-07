@@ -188,6 +188,11 @@ def scan_track(filepath):
         flags = classify_title(title)
         _set_serato_cue1_at_zero(filepath)
 
+        try:
+            file_size = os.path.getsize(filepath)
+        except OSError:
+            file_size = 0
+
         return {
             "id": fid,
             "path": filepath,
@@ -196,6 +201,7 @@ def scan_track(filepath):
             "genre": genre,
             "album": album,
             "duration": round(duration, 1),
+            "file_size": file_size,
             "cover": cover,
             "custom_tags": [],
             "flags": flags,
@@ -405,6 +411,14 @@ def get_tracks():
         tracks = [t for t in tracks if any(tag_q in ct.lower() for ct in t.get("custom_tags", []))]
     if flag:
         tracks = [t for t in tracks if flag in t.get("flags", [])]
+
+    # Backfill file_size for tracks missing it
+    for t in tracks:
+        if "file_size" not in t and t.get("path"):
+            try:
+                t["file_size"] = os.path.getsize(t["path"])
+            except OSError:
+                t["file_size"] = 0
 
     tracks.sort(key=lambda t: (t["artist"].lower(), t["title"].lower()))
     return jsonify({"tracks": tracks, "total": len(tracks)})
