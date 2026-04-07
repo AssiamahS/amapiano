@@ -647,44 +647,63 @@ function updatePlayerBtn(){document.getElementById("pPlayIcon").style.display=is
 const wfCache={};
 let wfData=null,wfCtx=null,wfCanvas=null,wfAudioCtx=null;
 function getAudioCtx(){if(!wfAudioCtx)wfAudioCtx=new(window.AudioContext||window.webkitAudioContext)();return wfAudioCtx}
-function computeWaveform(audioBuffer,bars){
-  const actx=getAudioCtx();
+async function computeWaveform(audioBuffer,bars){
   const sr=audioBuffer.sampleRate;
-  const ch=audioBuffer.getChannelData(0);
-  const len=ch.length;
+  const len=audioBuffer.length;
+  const dur=audioBuffer.duration;
+  const nCh=audioBuffer.numberOfChannels;
+
+  // Run audio through 3 actual frequency filters using OfflineAudioContext
+  async function filterBand(type,freq,freq2){
+    const offline=new OfflineAudioContext(1,len,sr);
+    const src=offline.createBufferSource();
+    src.buffer=audioBuffer;
+    if(type==='low'){
+      const f=offline.createBiquadFilter();
+      f.type='lowpass';f.frequency.value=freq;f.Q.value=0.7;
+      src.connect(f);f.connect(offline.destination);
+    }else if(type==='high'){
+      const f=offline.createBiquadFilter();
+      f.type='highpass';f.frequency.value=freq;f.Q.value=0.7;
+      src.connect(f);f.connect(offline.destination);
+    }else{
+      // bandpass = highpass then lowpass
+      const hp=offline.createBiquadFilter();
+      hp.type='highpass';hp.frequency.value=freq;hp.Q.value=0.7;
+      const lp=offline.createBiquadFilter();
+      lp.type='lowpass';lp.frequency.value=freq2;lp.Q.value=0.7;
+      src.connect(hp);hp.connect(lp);lp.connect(offline.destination);
+    }
+    src.start(0);
+    const rendered=await offline.startRendering();
+    return rendered.getChannelData(0);
+  }
+
+  const [lowCh,midCh,highCh]=await Promise.all([
+    filterBand('low',200),
+    filterBand('band',200,2000),
+    filterBand('high',2000)
+  ]);
+
+  const fullCh=audioBuffer.getChannelData(0);
   const step=Math.floor(len/bars);
-  // FFT size per bar segment
-  const fftSize=2048;
   const result={peaks:new Float32Array(bars),low:new Float32Array(bars),mid:new Float32Array(bars),high:new Float32Array(bars)};
-  // Frequency bin boundaries
-  const binHz=sr/fftSize;
-  const lowEnd=Math.floor(200/binHz);   // 0-200Hz = bass/kicks
-  const midEnd=Math.floor(2000/binHz);  // 200-2000Hz = vocals/snares
-  // Compute offline FFT per bar
-  const fft=new Float32Array(fftSize);
+
   for(let i=0;i<bars;i++){
     const off=i*step;
-    let sum=0,sumLow=0,sumMid=0,sumHigh=0;
-    // Simple amplitude
-    for(let j=0;j<step&&off+j<len;j++)sum+=Math.abs(ch[off+j]);
-    result.peaks[i]=sum/step;
-    // Quick DFT energy estimate using segments
-    const segLen=Math.min(fftSize,step);
-    for(let j=0;j<segLen;j++)fft[j]=ch[off+j]||0;
-    for(let j=segLen;j<fftSize;j++)fft[j]=0;
-    // Simple energy by frequency band using windowed samples
-    for(let j=0;j<segLen;j++){
-      const s=Math.abs(fft[j]);
-      const freq=(j/segLen)*sr/2;
-      if(freq<200)sumLow+=s;
-      else if(freq<2000)sumMid+=s;
-      else sumHigh+=s;
+    let sum=0,sLow=0,sMid=0,sHigh=0;
+    for(let j=0;j<step&&off+j<len;j++){
+      sum+=Math.abs(fullCh[off+j]);
+      sLow+=Math.abs(lowCh[off+j]);
+      sMid+=Math.abs(midCh[off+j]);
+      sHigh+=Math.abs(highCh[off+j]);
     }
-    result.low[i]=sumLow/segLen;
-    result.mid[i]=sumMid/segLen;
-    result.high[i]=sumHigh/segLen;
+    result.peaks[i]=sum/step;
+    result.low[i]=sLow/step;
+    result.mid[i]=sMid/step;
+    result.high[i]=sHigh/step;
   }
-  // Normalize each channel
+
   const norm=(arr)=>{const m=Math.max(...arr)||1;for(let i=0;i<arr.length;i++)arr[i]/=m};
   norm(result.peaks);norm(result.low);norm(result.mid);norm(result.high);
   return result;
@@ -698,7 +717,7 @@ async function loadWaveform(trackId,path){
     const actx=getAudioCtx();
     const decoded=await actx.decodeAudioData(buf);
     const bars=Math.min(800,wfCanvas?wfCanvas.width:800);
-    wfData=computeWaveform(decoded,bars);
+    wfData=await computeWaveform(decoded,bars);
     wfCache[trackId]=wfData;
     drawWaveform();
   }catch(e){console.warn("Waveform decode failed:",e);wfData=null}
