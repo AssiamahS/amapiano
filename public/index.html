@@ -448,7 +448,15 @@ function applyFilters(){
       filteredTracks=filteredTracks.filter(t=>t.title.toLowerCase().includes(q)||t.artist.toLowerCase().includes(q));
     }
   }
-  render();
+  updateFilteredStats();render();
+}
+function updateFilteredStats(){
+  const el=document.getElementById("statsText");
+  if(currentSearch||currentGenre||currentPlaylistId){
+    el.textContent=`${filteredTracks.length} tracks found`;
+  }else{
+    el.textContent=`${allTracks.length} tracks \u00b7 ${allTracks.filter(t=>!t.genre).length} untagged`;
+  }
 }
 let searchTimer;
 function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{currentSearch=document.getElementById("searchInput").value.trim();applyFilters()},200)}
