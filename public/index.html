@@ -53,8 +53,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 .scan-btn,.auto-tag-btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-weight:600;font-family:var(--font);transition:all .2s;letter-spacing:.2px}
 .scan-btn{background:none;border:1px solid var(--border);color:var(--text-secondary)}
 .scan-btn:hover{border-color:var(--accent);color:var(--accent)}
-.auto-tag-btn{background:var(--accent-glow);border:1px solid rgba(255,85,0,.25);color:var(--accent)}
-.auto-tag-btn:hover{background:rgba(255,85,0,.2);border-color:var(--accent)}
+.auto-tag-btn{background:none;border:1px solid var(--border);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);padding:0}
+.auto-tag-btn:hover{border-color:#1db954;background:rgba(29,185,84,.1)}
 
 /* ═══ SIDEBAR ═══ */
 .sidebar{position:fixed;left:-290px;top:var(--topbar-h);bottom:0;width:290px;background:rgba(8,8,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1px solid var(--border);z-index:90;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:16px 12px}
@@ -256,7 +256,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
   </div>
   <div class="search-box"><input type="text" id="searchInput" placeholder="Search songs, artists... (#tag)" oninput="debounceSearch()"></div>
   <span class="stats" id="statsText">Loading...</span>
-  <button class="auto-tag-btn" id="autoTagBtn" onclick="autoTagGenres()">Spotify Auto-Tag</button>
+  <button class="auto-tag-btn" id="autoTagBtn" onclick="autoTagGenres()" title="Spotify Auto-Tag"><svg width="16" height="16" viewBox="0 0 24 24" fill="#1db954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></button>
   <button class="scan-btn" id="scanBtn" onclick="scanLibrary()">Scan</button>
 </div>
 
@@ -609,7 +609,7 @@ async function spotifyLookup(){
 async function autoTagGenres(){
   const untagged=allTracks.filter(t=>!t.genre&&t.artist!=="Unknown").slice(0,50);
   if(!untagged.length){alert("No untagged tracks with known artists");return}
-  const btn=document.getElementById("autoTagBtn");btn.textContent=`Tagging 0/${untagged.length}...`;btn.disabled=true;
+  const btn=document.getElementById("autoTagBtn");const origHTML=btn.innerHTML;btn.textContent="...";btn.disabled=true;
   let done=0;
   for(const t of untagged){
     try{
@@ -620,10 +620,10 @@ async function autoTagGenres(){
         t.genre=data.genre;done++;
       }
     }catch(e){}
-    btn.textContent=`Tagging ${done}/${untagged.length}...`;
+    btn.textContent=`${done}`;
   }
-  btn.textContent=`Tagged ${done}!`;btn.disabled=false;
-  setTimeout(()=>{btn.textContent="Spotify Auto-Tag"},3000);
+  btn.textContent=`${done}!`;btn.disabled=false;
+  setTimeout(()=>{btn.innerHTML=origHTML},2000);
   buildFilters();applyFilters();updateStats();
 }
 
