@@ -3,203 +3,256 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Music Library</title>
+<title>Amapiano</title>
+<link rel="icon" href="/logo.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#050505;--bg-elevated:#0d0d0d;--bg-card:#111;--bg-hover:#161616;--bg-active:#1a1008;
+  --border:#1a1a1a;--border-hover:#2a2a2a;
+  --text:#e8e8e8;--text-secondary:#777;--text-tertiary:#444;
+  --accent:#ff5500;--accent-hover:#e64d00;--accent-glow:rgba(255,85,0,.12);
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+  --font:'DM Sans',sans-serif;--mono:'Space Mono',monospace;
+  --topbar-h:56px;--filter-h:42px;--player-h:72px;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#222;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#333}
 
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:#111;border-bottom:1px solid #222;display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
-.topbar .hamburger{width:36px;height:36px;border-radius:8px;border:none;background:none;color:#aaa;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.topbar .hamburger:hover{background:#222;color:#fff}
-.topbar h1{font-size:16px;font-weight:700;color:#ff5500;flex-shrink:0}
-.topbar .nav{display:flex;gap:3px;background:#1a1a1a;border-radius:7px;padding:2px}
-.topbar .nav button{padding:5px 12px;border:none;background:none;color:#888;font-size:11px;font-weight:600;cursor:pointer;border-radius:5px;transition:all .15s}
-.topbar .nav button.active{background:#ff5500;color:#fff}
-.search-box{flex:1;max-width:320px;position:relative}
-.search-box input{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:7px;padding:7px 10px 7px 28px;color:#eee;font-size:12px;outline:none}
-.search-box input:focus{border-color:#ff5500}
-.search-box::before{content:"⌕";position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#555;font-size:14px}
-.topbar .stats{font-size:10px;color:#555;margin-left:auto;flex-shrink:0}
-.scan-btn{padding:5px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600}
-.scan-btn:hover{border-color:#ff5500;color:#ff5500}
-.auto-tag-btn{padding:5px 12px;background:#1a3a1a;border:1px solid #2a5a2a;color:#6c6;border-radius:5px;font-size:10px;cursor:pointer;font-weight:600}
-.auto-tag-btn:hover{border-color:#4c4;color:#4c4}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 
-/* Sidebar */
-.sidebar{position:fixed;left:-280px;top:52px;bottom:0;width:280px;background:#0e0e0e;border-right:1px solid #222;z-index:90;transition:left .25s;overflow-y:auto;padding:12px}
+/* ═══ TOPBAR ═══ */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:rgba(8,8,8,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:14px}
+.topbar .hamburger{width:36px;height:36px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text-secondary);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.topbar .hamburger:hover{background:var(--bg-hover);color:var(--text)}
+.topbar .brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar .brand img{width:28px;height:28px;border-radius:6px}
+.topbar .brand h1{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+
+.topbar .nav{display:flex;gap:2px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:2px}
+.topbar .nav button{padding:6px 11px;border:none;background:none;color:var(--text-tertiary);font-size:13px;cursor:pointer;border-radius:6px;transition:all .2s;font-family:var(--font);line-height:1}
+.topbar .nav button:hover{color:var(--text-secondary)}
+.topbar .nav button.active{background:var(--accent);color:#fff}
+
+.search-box{flex:1;max-width:340px;position:relative}
+.search-box input{width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px 12px 8px 32px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .2s}
+.search-box input:focus{border-color:var(--accent)}
+.search-box input::placeholder{color:var(--text-tertiary)}
+.search-box::before{content:"\2315";position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-tertiary);font-size:15px}
+
+.topbar .stats{font-size:11px;color:var(--text-tertiary);margin-left:auto;flex-shrink:0;font-family:var(--mono);letter-spacing:-.3px}
+.scan-btn,.auto-tag-btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-weight:600;font-family:var(--font);transition:all .2s;letter-spacing:.2px}
+.scan-btn{background:none;border:1px solid var(--border);color:var(--text-secondary)}
+.scan-btn:hover{border-color:var(--accent);color:var(--accent)}
+.auto-tag-btn{background:var(--accent-glow);border:1px solid rgba(255,85,0,.25);color:var(--accent)}
+.auto-tag-btn:hover{background:rgba(255,85,0,.2);border-color:var(--accent)}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{position:fixed;left:-290px;top:var(--topbar-h);bottom:0;width:290px;background:rgba(8,8,8,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1px solid var(--border);z-index:90;transition:left .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:16px 12px}
 .sidebar.open{left:0}
-.sidebar h3{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px;padding:0 8px}
-.sidebar .pl-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .15s}
-.sidebar .pl-item:hover{background:#1a1a1a}
-.sidebar .pl-item.active{background:#1f1510;color:#ff5500}
-.sidebar .pl-item .pl-count{font-size:10px;color:#555;margin-left:auto}
-.sidebar .pl-item .pl-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
-.sidebar .new-pl{padding:8px;border-radius:6px;cursor:pointer;font-size:12px;color:#666;display:flex;align-items:center;gap:6px}
-.sidebar .new-pl:hover{background:#1a1a1a;color:#aaa}
-.sidebar .serato-section{border-top:1px solid #222;margin-top:12px}
+.sidebar h3{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1.5px;margin:16px 0 8px;padding:0 10px;font-weight:600}
+.sidebar .pl-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;color:var(--text-secondary)}
+.sidebar .pl-item:hover{background:var(--bg-hover);color:var(--text)}
+.sidebar .pl-item.active{background:var(--bg-active);color:var(--accent)}
+.sidebar .pl-item .pl-count{font-size:11px;color:var(--text-tertiary);margin-left:auto;font-family:var(--mono)}
+.sidebar .pl-item .pl-icon{font-size:14px;width:22px;text-align:center;flex-shrink:0;opacity:.6}
+.sidebar .pl-item.active .pl-icon{opacity:1}
+.sidebar .new-pl{padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:8px;transition:all .15s}
+.sidebar .new-pl:hover{background:var(--bg-hover);color:var(--text-secondary)}
+.sidebar .serato-section{border-top:1px solid var(--border);margin-top:16px;padding-top:4px}
 .sidebar .serato-section[open] .serato-arrow{transform:rotate(90deg)}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:none}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;display:none;backdrop-filter:blur(4px)}
 .overlay.active{display:block}
 
-.filterbar{position:fixed;top:52px;left:0;right:0;height:40px;background:#0e0e0e;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;padding:0 16px;gap:6px;z-index:70;overflow-x:auto}
-.filter-chip{padding:4px 10px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;font-size:10px;color:#888;cursor:pointer;white-space:nowrap;font-weight:500;transition:all .15s}
-.filter-chip:hover{border-color:#555;color:#ccc}
-.filter-chip.active{background:#ff5500;border-color:#ff5500;color:#fff}
-.filter-chip .count{color:#555;margin-left:3px}.filter-chip.active .count{color:rgba(255,255,255,.7)}
+/* ═══ FILTER BAR ═══ */
+.filterbar{position:fixed;top:var(--topbar-h);left:0;right:0;height:var(--filter-h);background:rgba(8,8,8,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:6px;z-index:70;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.filterbar::-webkit-scrollbar{display:none}
+.filter-chip{padding:5px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;font-weight:500;transition:all .2s;font-family:var(--font)}
+.filter-chip:hover{border-color:var(--border-hover);color:var(--text)}
+.filter-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.filter-chip .count{color:var(--text-tertiary);margin-left:3px;font-family:var(--mono);font-size:10px}
+.filter-chip.active .count{color:rgba(255,255,255,.7)}
 
-.content{margin-top:92px;padding:20px;padding-bottom:80px}
+/* ═══ CONTENT ═══ */
+.content{margin-top:calc(var(--topbar-h) + var(--filter-h));padding:24px;padding-bottom:calc(var(--player-h) + 24px)}
 
-/* Hero carousel */
-.hero-section{margin-bottom:28px}
-.hero-section h2{font-size:20px;font-weight:700;margin-bottom:14px}
-.carousel{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.carousel::-webkit-scrollbar{height:5px}.carousel::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+/* Hero */
+.hero-section{margin-bottom:32px}
+.hero-section h2{font-size:22px;font-weight:700;margin-bottom:16px;letter-spacing:-.3px}
+.carousel{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.carousel::-webkit-scrollbar{height:4px}
+.carousel::-webkit-scrollbar-thumb{background:#222;border-radius:2px}
 
-.hero-card{flex-shrink:0;width:180px;scroll-snap-align:start;cursor:pointer;transition:transform .2s}
-.hero-card:hover{transform:scale(1.03)}
-.art-wrap{position:relative;width:100%;aspect-ratio:1;border-radius:10px;background:#1a1a1a;overflow:hidden}
-.art-wrap img{width:100%;height:100%;object-fit:cover}
-.art-wrap .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;color:#333;background:linear-gradient(135deg,#1a1a1a,#222)}
-.art-wrap .play-overlay{position:absolute;bottom:6px;right:6px;width:32px;height:32px;border-radius:50%;background:rgba(255,85,0,.9);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
-.hero-card:hover .play-overlay,.grid-card:hover .play-overlay{opacity:1}
+.hero-card{flex-shrink:0;width:170px;scroll-snap-align:start;cursor:pointer;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.hero-card:hover{transform:translateY(-4px)}
+.art-wrap{position:relative;width:100%;aspect-ratio:1;border-radius:var(--radius);background:var(--bg-card);overflow:hidden}
+.art-wrap img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.hero-card:hover .art-wrap img,.grid-card:hover .art-wrap img{transform:scale(1.05)}
+.art-wrap .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text-tertiary);background:linear-gradient(145deg,#111,#181818)}
+.art-wrap .play-overlay{position:absolute;bottom:8px;right:8px;width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(4px);transition:all .25s;box-shadow:0 4px 16px rgba(255,85,0,.3)}
+.hero-card:hover .play-overlay,.grid-card:hover .play-overlay{opacity:1;transform:translateY(0)}
 .art-wrap .play-overlay::after{content:"";border-style:solid;border-width:5px 0 5px 9px;border-color:transparent transparent transparent white;margin-left:2px}
 
-/* Badges */
 .badge-row{position:absolute;top:6px;right:6px;display:flex;gap:3px;z-index:5}
 .badge{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.badge-video{background:rgba(0,0,0,.65)}
-.badge-video svg{width:14px;height:14px;fill:#fff}
-.badge-lyrics{background:rgba(0,80,0,.7)}
-.badge-lyrics svg{width:13px;height:13px;fill:#5f5}
+.badge-video{background:rgba(0,0,0,.6)}
+.badge-video svg{width:13px;height:13px;fill:#fff}
+.badge-lyrics{background:rgba(0,80,0,.65)}
+.badge-lyrics svg{width:12px;height:12px;fill:#5f5}
 
-.meta{padding:6px 2px}
-.meta .title{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta .artist{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta .genre-tag{display:inline-block;font-size:9px;padding:1px 5px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#888;margin-top:2px}
+.meta{padding:8px 2px 0}
+.meta .title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px}
+.meta .artist{font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.meta .genre-tag{display:inline-block;font-size:9px;padding:2px 7px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text-secondary);margin-top:4px;font-weight:500}
 
-.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
-.grid-card{cursor:pointer;transition:transform .2s}.grid-card:hover{transform:scale(1.03)}
+/* Grid */
+.grid-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:18px}
+.grid-card{cursor:pointer;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.grid-card:hover{transform:translateY(-4px)}
 
 /* List */
 .list-view{width:100%}
-.list-header{display:grid;grid-template-columns:40px 1.2fr 1fr 140px 70px 50px;gap:10px;padding:6px 10px;border-bottom:1px solid #222;font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.5px;font-weight:600;position:sticky;top:92px;background:#0a0a0a;z-index:10}
-.list-row{display:grid;grid-template-columns:40px 1.2fr 1fr 140px 70px 50px;gap:10px;padding:6px 10px;align-items:center;border-bottom:1px solid #111;cursor:pointer;transition:background .15s}
-.list-row:hover{background:#151515}
-.list-row.playing{background:#1f1510}
-.list-row .art{width:36px;height:36px;border-radius:4px;overflow:hidden;background:#1a1a1a;position:relative}
+.list-header{display:grid;grid-template-columns:44px 1.2fr 1fr 140px 70px 55px;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;font-weight:600;position:sticky;top:calc(var(--topbar-h) + var(--filter-h));background:var(--bg);z-index:10}
+.list-row{display:grid;grid-template-columns:44px 1.2fr 1fr 140px 70px 55px;gap:10px;padding:7px 12px;align-items:center;border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;transition:background .15s}
+.list-row:hover{background:var(--bg-hover)}
+.list-row.playing{background:var(--bg-active)}
+.list-row .art{width:38px;height:38px;border-radius:5px;overflow:hidden;background:var(--bg-card);position:relative}
 .list-row .art img{width:100%;height:100%;object-fit:cover}
-.list-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#333}
-.list-row .title{font-weight:500;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.list-row .artist{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.genre-editable{background:#1a1a1a;border:1px solid transparent;border-radius:4px;padding:2px 6px;color:#888;font-size:10px;cursor:pointer;min-width:50px;outline:none;width:100%}
-.genre-editable:hover{border-color:#333}.genre-editable:focus{border-color:#ff5500;color:#eee}
-.list-row .duration{font-size:10px;color:#555;font-family:'SF Mono',monospace}
-.list-row .flags-cell{display:flex;gap:2px}
-.list-row .mini-badge{width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.list-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-tertiary)}
+.list-row .title{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-row .artist{font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.genre-editable{background:var(--bg-elevated);border:1px solid transparent;border-radius:5px;padding:4px 8px;color:var(--text-secondary);font-size:11px;cursor:pointer;min-width:50px;outline:none;width:100%;font-family:var(--font);transition:border-color .2s}
+.genre-editable:hover{border-color:var(--border-hover)}
+.genre-editable:focus{border-color:var(--accent);color:var(--text)}
+.list-row .duration{font-size:11px;color:var(--text-tertiary);font-family:var(--mono)}
+.list-row .flags-cell{display:flex;gap:3px}
+.list-row .mini-badge{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center}
 .list-row .mini-badge svg{width:10px;height:10px}
 
-/* Player */
-.player{position:fixed;bottom:0;left:0;right:0;height:58px;background:#111;border-top:1px solid #222;display:none;align-items:center;padding:0 16px;gap:12px;z-index:100}
-.player.active{display:flex}
-.player .player-art{width:40px;height:40px;border-radius:5px;overflow:hidden;background:#1a1a1a;flex-shrink:0}
-.player .player-art img{width:100%;height:100%;object-fit:cover}
-.player .player-info{min-width:0;max-width:180px}
-.player .player-info .title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.player .player-info .artist{font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.player .play-btn{width:32px;height:32px;border-radius:50%;background:#ff5500;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.player .play-btn svg{fill:white;width:12px;height:12px}
-.player .progress{flex:1;height:3px;background:#222;border-radius:2px;cursor:pointer}
-.player .progress .bar{height:100%;background:#ff5500;border-radius:2px;width:0}
-.player .time{font-size:10px;color:#555;font-family:'SF Mono',monospace;min-width:80px;text-align:center}
-.player .add-to-pl{padding:4px 8px;background:#222;border:1px solid #333;border-radius:4px;font-size:9px;color:#888;cursor:pointer;white-space:nowrap}
-.player .add-to-pl:hover{border-color:#ff5500;color:#ff5500}
-
-/* Modals */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
-.modal-overlay.active{display:flex}
-.modal{background:#1a1a1a;border-radius:14px;padding:20px;width:400px;max-height:80vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:700;margin-bottom:14px}
-.modal .field{margin-bottom:12px}
-.modal .field label{display:block;font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
-.modal .field input,.modal .field select{width:100%;background:#111;border:1px solid #333;border-radius:6px;padding:7px 10px;color:#eee;font-size:12px;outline:none}
-.modal .field input:focus{border-color:#ff5500}
-.modal .tags-input{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.modal .tag-pill{display:flex;align-items:center;gap:3px;padding:3px 8px;background:#222;border-radius:10px;font-size:11px;color:#ccc}
-.modal .tag-pill .remove{cursor:pointer;color:#666;font-size:12px}.modal .tag-pill .remove:hover{color:#ff5500}
-.modal .btn-row{display:flex;gap:6px;margin-top:14px}
-.modal .btn{padding:7px 16px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-.modal .btn-primary{background:#ff5500;color:#fff}.modal .btn-primary:hover{background:#e64d00}
-.modal .btn-secondary{background:#222;color:#aaa}.modal .btn-secondary:hover{background:#333}
-.modal .btn-spotify{background:#1db954;color:#fff}.modal .btn-spotify:hover{background:#1aa34a}
-
-/* Playlist modal items */
-.modal .pl-modal-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;font-size:13px;margin-bottom:4px}
-.modal .pl-modal-item:hover{background:#2a2a2a}
-.modal .pl-modal-item .pl-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;color:#ff5500}
-.modal .pl-modal-item .pl-name{flex:1}
-.modal .pl-modal-item .pl-count{font-size:11px;color:#555}
-
-/* Thumbnail view (small art + text rows) */
-.thumb-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px}
-.thumb-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s}
-.thumb-row:hover{background:#1a1a1a}
-.thumb-row.playing{background:#1f1510}
-.thumb-row .art{width:48px;height:48px;border-radius:5px;overflow:hidden;background:#1a1a1a;flex-shrink:0;position:relative}
+/* Thumbnail */
+.thumb-view{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px}
+.thumb-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s}
+.thumb-row:hover{background:var(--bg-hover)}
+.thumb-row.playing{background:var(--bg-active)}
+.thumb-row .art{width:50px;height:50px;border-radius:6px;overflow:hidden;background:var(--bg-card);flex-shrink:0;position:relative}
 .thumb-row .art img{width:100%;height:100%;object-fit:cover}
-.thumb-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;color:#333}
+.thumb-row .art .no-art{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-tertiary)}
 .thumb-row .info{flex:1;min-width:0}
-.thumb-row .info .title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.thumb-row .info .artist{font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.thumb-row .info .genre-sm{font-size:9px;color:#555}
-.thumb-row .duration{font-size:10px;color:#555;font-family:'SF Mono',monospace;flex-shrink:0}
-.thumb-row .flags-cell{display:flex;gap:2px;flex-shrink:0}
+.thumb-row .info .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb-row .info .artist{font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.thumb-row .info .genre-sm{font-size:10px;color:var(--text-tertiary);margin-top:2px}
+.thumb-row .duration{font-size:11px;color:var(--text-tertiary);font-family:var(--mono);flex-shrink:0}
+.thumb-row .flags-cell{display:flex;gap:3px;flex-shrink:0}
 
-/* CoverFlow view */
-.coverflow-section{background:linear-gradient(180deg,#151515 0%,#0a0a0a 100%);border-radius:12px;padding:20px 0;user-select:none;position:relative}
-.cf-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:20px 0;align-items:center;justify-content:center;min-height:260px}
-.cf-scroll::-webkit-scrollbar{height:0;display:none}
-/* Pad left/right so first/last card can center */
-.cf-scroll::before,.cf-scroll::after{content:"";flex-shrink:0;width:calc(50% - 110px)}
-.cf-card{flex-shrink:0;width:220px;scroll-snap-align:center;cursor:pointer;transition:transform .3s,opacity .3s,filter .3s;opacity:.4;filter:brightness(.6)}
-.cf-card.active{opacity:1;transform:scale(1.15);filter:brightness(1);z-index:10}
-.cf-card:hover:not(.active){opacity:.7;filter:brightness(.8)}
-.cf-card img{width:220px;height:220px;object-fit:cover;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7);display:block}
-.cf-card .no-art{width:220px;height:220px;display:flex;align-items:center;justify-content:center;font-size:50px;color:#333;background:linear-gradient(135deg,#1a1a1a,#2a2a2a);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.7)}
-.cf-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(255,255,255,.1);border:none;border-radius:50%;color:#fff;font-size:22px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center}
-.cf-nav:hover{background:rgba(255,255,255,.2)}
-.cf-nav.left{left:12px}
-.cf-nav.right{right:12px}
-.cf-slider-row{display:flex;align-items:center;gap:12px;padding:10px 24px 0}
-.cf-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#222;border-radius:2px;outline:none}
-.cf-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#ff5500;cursor:pointer;border:2px solid #333}
-.cf-slider-label{font-size:10px;color:#555;min-width:80px;text-align:center;font-family:'SF Mono',monospace}
-.cf-info{text-align:center;padding:10px 12px 6px}
-.cf-info .title{font-size:17px;font-weight:700;margin-bottom:2px}
-.cf-info .artist{font-size:13px;color:#888}
-.cf-info .album{font-size:11px;color:#555;margin-top:2px}
-.cf-list{border-top:1px solid #222;max-height:300px;overflow-y:auto}
+/* CoverFlow */
+.coverflow-section{background:linear-gradient(180deg,#0a0a0a 0%,var(--bg) 100%);border-radius:var(--radius-lg);padding:24px 0;user-select:none;position:relative}
+.cf-scroll{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:24px 0;align-items:center;justify-content:center;min-height:280px}
+.cf-scroll::-webkit-scrollbar{display:none}
+.cf-scroll::before,.cf-scroll::after{content:"";flex-shrink:0;width:calc(50% - 120px)}
+.cf-card{flex-shrink:0;width:230px;scroll-snap-align:center;cursor:pointer;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s,filter .35s;opacity:.35;filter:brightness(.5) saturate(.7)}
+.cf-card.active{opacity:1;transform:scale(1.12);filter:brightness(1) saturate(1);z-index:10}
+.cf-card:hover:not(.active){opacity:.6;filter:brightness(.7)}
+.cf-card img{width:230px;height:230px;object-fit:cover;border-radius:var(--radius);box-shadow:0 12px 40px rgba(0,0,0,.7);display:block}
+.cf-card .no-art{width:230px;height:230px;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--text-tertiary);background:linear-gradient(145deg,#111,#1a1a1a);border-radius:var(--radius);box-shadow:0 12px 40px rgba(0,0,0,.7)}
+.cf-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:50%;color:#fff;font-size:20px;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px)}
+.cf-nav:hover{background:rgba(255,255,255,.12)}
+.cf-nav.left{left:16px}
+.cf-nav.right{right:16px}
+.cf-slider-row{display:flex;align-items:center;gap:14px;padding:12px 28px 0}
+.cf-slider{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:#1a1a1a;border-radius:2px;outline:none}
+.cf-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;box-shadow:0 0 8px rgba(255,85,0,.3)}
+.cf-slider-label{font-size:11px;color:var(--text-tertiary);min-width:80px;text-align:center;font-family:var(--mono)}
+.cf-info{text-align:center;padding:14px 12px 8px}
+.cf-info .title{font-size:18px;font-weight:700;margin-bottom:3px;letter-spacing:-.3px}
+.cf-info .artist{font-size:14px;color:var(--text-secondary)}
+.cf-info .album{font-size:12px;color:var(--text-tertiary);margin-top:3px}
+.cf-list{border-top:1px solid var(--border);max-height:300px;overflow-y:auto}
 
-/* Scroll for filter bar in all views */
-.filterbar{scrollbar-width:none;-ms-overflow-style:none}
-.filterbar::-webkit-scrollbar{display:none}
+/* ═══ PLAYER ═══ */
+.player{position:fixed;bottom:0;left:0;right:0;height:var(--player-h);background:rgba(10,10,10,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:none;align-items:center;padding:0 20px;gap:14px;z-index:100}
+.player.active{display:flex}
+.player .player-art{width:48px;height:48px;border-radius:7px;overflow:hidden;background:var(--bg-card);flex-shrink:0;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.player .player-art img{width:100%;height:100%;object-fit:cover}
+.player .player-info{min-width:0;max-width:200px}
+.player .player-info .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px}
+.player .player-info .artist{font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.player .play-btn{width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,background .15s;box-shadow:0 2px 12px rgba(255,85,0,.25)}
+.player .play-btn:hover{transform:scale(1.08);background:var(--accent-hover)}
+.player .play-btn:active{transform:scale(.95)}
+.player .play-btn svg{fill:white;width:14px;height:14px}
+.player .progress{flex:1;height:4px;background:var(--bg-elevated);border-radius:2px;cursor:pointer;position:relative;overflow:hidden}
+.player .progress .bar{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .1s linear;position:relative}
+.player .progress .bar::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
+.player .progress:hover .bar::after{opacity:1}
+.player .time{font-size:11px;color:var(--text-tertiary);font-family:var(--mono);min-width:85px;text-align:center;letter-spacing:-.3px}
+.player .add-to-pl{padding:5px 12px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:10px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;font-family:var(--font);font-weight:500;transition:all .2s}
+.player .add-to-pl:hover{border-color:var(--accent);color:var(--accent)}
 
-.empty-state{text-align:center;padding:60px 20px;color:#444}
-.empty-state h2{font-size:22px;margin-bottom:10px;color:#666}
-.empty-state p{font-size:13px;margin-bottom:20px}
-.empty-state .scan-big{padding:10px 28px;background:#ff5500;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+/* ═══ MODALS ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:420px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:18px;letter-spacing:-.2px}
+.modal .field{margin-bottom:14px}
+.modal .field label{display:block;font-size:10px;color:var(--text-tertiary);margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.modal .field input,.modal .field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .2s}
+.modal .field input:focus{border-color:var(--accent)}
+.modal .tags-input{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.modal .tag-pill{display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:12px;font-size:11px;color:var(--text-secondary);font-weight:500}
+.modal .tag-pill .remove{cursor:pointer;color:var(--text-tertiary);font-size:13px;transition:color .15s}
+.modal .tag-pill .remove:hover{color:var(--accent)}
+.modal .btn-row{display:flex;gap:8px;margin-top:18px}
+.modal .btn{padding:9px 18px;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s}
+.modal .btn-primary{background:var(--accent);color:#fff}
+.modal .btn-primary:hover{background:var(--accent-hover)}
+.modal .btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border)}
+.modal .btn-secondary:hover{background:var(--bg-hover);color:var(--text)}
+.modal .btn-spotify{background:#1db954;color:#fff}
+.modal .btn-spotify:hover{background:#1aa34a}
+
+.modal .pl-modal-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s;font-size:13px;margin-bottom:4px}
+.modal .pl-modal-item:hover{background:var(--bg-hover)}
+.modal .pl-modal-item .pl-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;color:var(--accent)}
+.modal .pl-modal-item .pl-name{flex:1;font-weight:500}
+.modal .pl-modal-item .pl-count{font-size:11px;color:var(--text-tertiary);font-family:var(--mono)}
+
+.empty-state{text-align:center;padding:80px 20px;color:var(--text-tertiary)}
+.empty-state h2{font-size:24px;margin-bottom:12px;color:var(--text-secondary);font-weight:700;letter-spacing:-.3px}
+.empty-state p{font-size:14px;margin-bottom:24px}
+.empty-state .scan-big{padding:12px 32px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s;box-shadow:0 4px 20px rgba(255,85,0,.25)}
+.empty-state .scan-big:hover{background:var(--accent-hover);transform:translateY(-1px)}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.grid-card,.thumb-row,.list-row{animation:fadeIn .3s ease both}
+.grid-card:nth-child(n+2){animation-delay:.02s}
+.grid-card:nth-child(n+3){animation-delay:.04s}
+.grid-card:nth-child(n+4){animation-delay:.06s}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <button class="hamburger" onclick="toggleSidebar()">☰</button>
-  <h1>Music Library</h1>
+  <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+  <div class="brand">
+    <img src="/logo.png" alt="Amapiano">
+    <h1>Amapiano</h1>
+  </div>
   <div class="nav">
-    <button onclick="setView('list')" id="viewList" title="List">☰</button>
-    <button onclick="setView('thumb')" id="viewThumb" title="Thumbnails">⊞</button>
-    <button class="active" onclick="setView('grid')" id="viewGrid" title="Grid">⊟</button>
-    <button onclick="setView('coverflow')" id="viewCoverflow" title="CoverFlow">▤</button>
+    <button onclick="setView('list')" id="viewList" title="List">&#9776;</button>
+    <button onclick="setView('thumb')" id="viewThumb" title="Thumbnails">&#8862;</button>
+    <button class="active" onclick="setView('grid')" id="viewGrid" title="Grid">&#8863;</button>
+    <button onclick="setView('coverflow')" id="viewCoverflow" title="CoverFlow">&#9636;</button>
   </div>
   <div class="search-box"><input type="text" id="searchInput" placeholder="Search songs, artists... (#tag)" oninput="debounceSearch()"></div>
   <span class="stats" id="statsText">Loading...</span>
@@ -211,9 +264,9 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 <div class="overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="sidebar" id="sidebar">
   <h3>Library</h3>
-  <div class="pl-item active" data-sb="all" onclick="sbSelect(this);showAll()"><span class="pl-icon">♫</span>All Songs<span class="pl-count" id="allCount"></span></div>
-  <div class="pl-item" data-sb="video" onclick="sbSelect(this);filterFlag('video')"><span class="pl-icon">☁</span>Music Videos<span class="pl-count" id="videoCount"></span></div>
-  <div class="pl-item" data-sb="lyrics" onclick="sbSelect(this);filterFlag('lyrics')"><span class="pl-icon">✓</span>Lyrics/Visualizer<span class="pl-count" id="lyricsCount"></span></div>
+  <div class="pl-item active" data-sb="all" onclick="sbSelect(this);showAll()"><span class="pl-icon">&#9835;</span>All Songs<span class="pl-count" id="allCount"></span></div>
+  <div class="pl-item" data-sb="video" onclick="sbSelect(this);filterFlag('video')"><span class="pl-icon">&#9729;</span>Music Videos<span class="pl-count" id="videoCount"></span></div>
+  <div class="pl-item" data-sb="lyrics" onclick="sbSelect(this);filterFlag('lyrics')"><span class="pl-icon">&#10003;</span>Lyrics<span class="pl-count" id="lyricsCount"></span></div>
   <div class="pl-item" data-sb="untagged" onclick="sbSelect(this);showUntagged()"><span class="pl-icon">?</span>No Genre<span class="pl-count" id="untaggedCount"></span></div>
 
   <h3>Playlists</h3>
@@ -221,7 +274,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div class="new-pl" onclick="createPlaylist()">+ New Playlist</div>
 
   <details class="serato-section">
-    <summary style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;padding:12px 8px 8px;user-select:none;list-style:none;display:flex;align-items:center;gap:6px"><span class="serato-arrow" style="font-size:8px;transition:transform .2s">▶</span> Serato Crates</summary>
+    <summary style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;cursor:pointer;padding:12px 10px 8px;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;font-weight:600"><span class="serato-arrow" style="font-size:8px;transition:transform .2s">&#9654;</span> Serato Crates</summary>
     <div id="seratoCrates"></div>
   </details>
 </div>
@@ -230,7 +283,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
 
 <div class="content" id="content">
   <div class="empty-state" id="emptyState">
-    <h2>Welcome to your Music Library</h2>
+    <h2>Welcome to Amapiano</h2>
     <p>Scan your Music folder to import tracks.</p>
     <button class="scan-big" onclick="scanLibrary()">Scan Music Folder</button>
   </div>
@@ -243,9 +296,9 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div id="mainList" class="list-view" style="display:none"></div>
   <div id="mainCoverflow" style="display:none">
     <div class="coverflow-section" id="cfContainer">
-      <button class="cf-nav left" onclick="cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex)">‹</button>
+      <button class="cf-nav left" onclick="cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex)">&#8249;</button>
       <div class="cf-scroll" id="cfScroll"></div>
-      <button class="cf-nav right" onclick="cfIndex=Math.min((cfTracksCached||[]).length-1,cfIndex+1);cfSliderChange(cfIndex)">›</button>
+      <button class="cf-nav right" onclick="cfIndex=Math.min((cfTracksCached||[]).length-1,cfIndex+1);cfSliderChange(cfIndex)">&#8250;</button>
       <div class="cf-slider-row">
         <span class="cf-slider-label" id="cfSliderLabel">1 / 0</span>
         <input type="range" class="cf-slider" id="cfSlider" min="0" max="0" value="0" oninput="cfSliderChange(this.value)">
@@ -282,14 +335,14 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
     <div class="field">
       <label>Custom Tags</label>
       <div class="tags-input" id="editTags"></div>
-      <div style="display:flex;gap:6px;margin-top:6px">
+      <div style="display:flex;gap:6px;margin-top:8px">
         <input type="text" id="newTagInput" placeholder="Type tag + Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addCustomTag();event.preventDefault()}">
-        <button class="btn btn-secondary" onclick="addCustomTag()" style="padding:6px 12px;font-size:11px">Add</button>
+        <button class="btn btn-secondary" onclick="addCustomTag()" style="padding:7px 14px;font-size:11px">Add</button>
       </div>
     </div>
-    <details style="margin-bottom:12px">
-      <summary style="font-size:10px;color:#888;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;user-select:none">File Location</summary>
-      <div id="editFilePath" style="font-size:11px;color:#555;font-family:'SF Mono',monospace;word-break:break-all;padding:6px 10px;background:#111;border-radius:6px;user-select:all;cursor:text;margin-top:4px"></div>
+    <details style="margin-bottom:14px">
+      <summary style="font-size:10px;color:var(--text-tertiary);cursor:pointer;text-transform:uppercase;letter-spacing:1px;user-select:none;font-weight:600">File Location</summary>
+      <div id="editFilePath" style="font-size:11px;color:var(--text-tertiary);font-family:var(--mono);word-break:break-all;padding:8px 12px;background:var(--bg);border-radius:var(--radius-sm);user-select:all;cursor:text;margin-top:6px;border:1px solid var(--border)"></div>
     </details>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveTrackEdit()">Save</button>
@@ -304,7 +357,7 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFo
   <div class="modal">
     <h3>Add to Playlist</h3>
     <div id="plModalList"></div>
-    <div class="btn-row" style="margin-top:12px">
+    <div class="btn-row" style="margin-top:14px">
       <button class="btn btn-primary" onclick="createPlaylistAndAdd()">+ New Playlist</button>
       <button class="btn btn-secondary" onclick="closePlModal()">Cancel</button>
     </div>
@@ -352,14 +405,13 @@ async function scanLibrary(){
 
 async function updateStats(){
   const res=await fetch(`${API}/stats`);const data=await res.json();
-  document.getElementById("statsText").textContent=`${data.total} tracks · ${data.no_genre} untagged`;
+  document.getElementById("statsText").textContent=`${data.total} tracks \u00b7 ${data.no_genre} untagged`;
   document.getElementById("allCount").textContent=data.total;
   document.getElementById("videoCount").textContent=data.video_count;
   document.getElementById("lyricsCount").textContent=data.lyrics_count;
   document.getElementById("untaggedCount").textContent=data.no_genre;
 }
 
-// Sidebar
 function toggleSidebar(){
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebarOverlay").classList.toggle("active");
@@ -372,7 +424,6 @@ function showAll(){currentPlaylistId=null;activeSidebarId='all';filteredTracks=a
 function showUntagged(){currentPlaylistId=null;activeSidebarId='untagged';filteredTracks=allTracks.filter(t=>!t.genre);render();toggleSidebar()}
 function filterFlag(f){currentPlaylistId=null;activeSidebarId=f;filteredTracks=allTracks.filter(t=>(t.flags||[]).includes(f));render();toggleSidebar()}
 
-// Filters
 async function buildFilters(){
   const res=await fetch(`${API}/tags`);const data=await res.json();
   const bar=document.getElementById("filterBar");
@@ -390,7 +441,6 @@ function applyFilters(){
   else if(currentGenre)filteredTracks=filteredTracks.filter(t=>t.genre===currentGenre);
   if(currentSearch){
     if(currentSearch.startsWith("#")){
-      // Search custom tags
       const tag=currentSearch.slice(1).toLowerCase();
       filteredTracks=filteredTracks.filter(t=>(t.custom_tags||[]).some(ct=>ct.toLowerCase().includes(tag)));
     }else{
@@ -403,7 +453,6 @@ function applyFilters(){
 let searchTimer;
 function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{currentSearch=document.getElementById("searchInput").value.trim();applyFilters()},200)}
 
-// Views
 let cfIndex=0;
 function setView(v){
   currentView=v;
@@ -418,17 +467,15 @@ function renderHero(){
   if(heroDone)return;
   const carousel=document.getElementById("heroCarousel");
   const hero=[...allTracks.filter(t=>t.cover).sort(()=>Math.random()-.5).slice(0,25),...allTracks.filter(t=>!t.cover).sort(()=>Math.random()-.5).slice(0,5)].slice(0,25);
-  carousel.innerHTML=hero.map(t=>`<div class="hero-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art-wrap">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}${badges(t.flags)}<div class="play-overlay"></div></div><div class="meta"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div></div></div>`).join("");
+  carousel.innerHTML=hero.map(t=>`<div class="hero-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art-wrap">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">\u266B</div>`}${badges(t.flags)}<div class="play-overlay"></div></div><div class="meta"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div></div></div>`).join("");
   heroDone=true;
 }
 
 function render(){
   const views=["mainGrid","mainList","mainThumb","mainCoverflow"];
   views.forEach(v=>document.getElementById(v).style.display="none");
-  // Hide hero in coverflow mode
   const heroEl=document.getElementById("heroSection");
   if(heroEl)heroEl.style.display=currentView==="coverflow"?"none":"block";
-
   if(currentView==="grid"){document.getElementById("mainGrid").style.display="grid";renderGrid()}
   else if(currentView==="list"){document.getElementById("mainList").style.display="block";renderList()}
   else if(currentView==="thumb"){document.getElementById("mainThumb").style.display="grid";renderThumb()}
@@ -436,58 +483,45 @@ function render(){
 }
 
 function renderGrid(){
-  document.getElementById("mainGrid").innerHTML=filteredTracks.map(t=>`<div class="grid-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art-wrap">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}${badges(t.flags)}<div class="play-overlay"></div></div><div class="meta"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<span class="genre-tag">${esc(t.genre)}</span>`:""}</div></div>`).join("");
+  document.getElementById("mainGrid").innerHTML=filteredTracks.map(t=>`<div class="grid-card" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art-wrap">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">\u266B</div>`}${badges(t.flags)}<div class="play-overlay"></div></div><div class="meta"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<span class="genre-tag">${esc(t.genre)}</span>`:""}</div></div>`).join("");
 }
 
 function renderList(){
   let h=`<div class="list-header"><span></span><span>Title</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
-  h+=filteredTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><input class="genre-editable" value="${esc(t.genre)}" onclick="event.stopPropagation()" onchange="quickGenre('${t.id}',this.value)" placeholder="+ genre"><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+  h+=filteredTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">\u266B</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><input class="genre-editable" value="${esc(t.genre)}" onclick="event.stopPropagation()" onchange="quickGenre('${t.id}',this.value)" placeholder="+ genre"><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
   document.getElementById("mainList").innerHTML=h;
 }
 
 function renderThumb(){
-  document.getElementById("mainThumb").innerHTML=filteredTracks.map(t=>`<div class="thumb-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="info"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<div class="genre-sm">${esc(t.genre)}</div>`:""}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+  document.getElementById("mainThumb").innerHTML=filteredTracks.map(t=>`<div class="thumb-row${currentTrack?.id===t.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">\u266B</div>`}</div><div class="info"><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div>${t.genre?`<div class="genre-sm">${esc(t.genre)}</div>`:""}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
 }
 
-// CoverFlow - virtualized: only renders ~21 cards around cfIndex
 let cfBuilt=false, cfTracksCached=[];
 function renderCoverflow(){
   cfTracksCached=filteredTracks.filter(t=>t.cover);
   const scroll=document.getElementById("cfScroll");
   const slider=document.getElementById("cfSlider");
-
-  if(!cfTracksCached.length){
-    scroll.innerHTML="<p style='color:#555;padding:80px;text-align:center'>No cover art to display</p>";
-    return;
-  }
+  if(!cfTracksCached.length){scroll.innerHTML="<p style='color:var(--text-tertiary);padding:80px;text-align:center'>No cover art to display</p>";return}
   if(cfIndex>=cfTracksCached.length)cfIndex=cfTracksCached.length-1;
   if(cfIndex<0)cfIndex=0;
-
-  slider.max=cfTracksCached.length-1;
-  slider.value=cfIndex;
+  slider.max=cfTracksCached.length-1;slider.value=cfIndex;
   document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracksCached.length}`;
-
-  cfRenderCards();
-  cfUpdateInfo();
+  cfRenderCards();cfUpdateInfo();
 }
 
 function cfRenderCards(){
   const scroll=document.getElementById("cfScroll");
   const total=cfTracksCached.length;
-  // Render window of 21 cards centered on cfIndex
   const WINDOW=10;
   const start=Math.max(0,cfIndex-WINDOW);
   const end=Math.min(total-1,cfIndex+WINDOW);
-
   let html='';
   for(let i=start;i<=end;i++){
     const t=cfTracksCached[i];
     const isActive=i===cfIndex;
-    html+=`<div class="cf-card${isActive?" active":""}" data-idx="${i}" onclick="cfSelect(${i})" ondblclick="openTagModal('${t.id}')">${t.cover?`<img src="${t.cover}">`:`<div class="no-art">♫</div>`}</div>`;
+    html+=`<div class="cf-card${isActive?" active":""}" data-idx="${i}" onclick="cfSelect(${i})" ondblclick="openTagModal('${t.id}')">${t.cover?`<img src="${t.cover}">`:`<div class="no-art">\u266B</div>`}</div>`;
   }
   scroll.innerHTML=html;
-
-  // Scroll the active card to center
   requestAnimationFrame(()=>{
     const active=scroll.querySelector(".cf-card.active");
     if(active)active.scrollIntoView({behavior:cfBuilt?"smooth":"instant",block:"nearest",inline:"center"});
@@ -501,41 +535,23 @@ function cfUpdateInfo(){
   document.getElementById("cfTitle").textContent=ct.title;
   document.getElementById("cfArtist").textContent=ct.artist;
   document.getElementById("cfAlbum").textContent=ct.album||ct.genre||"";
-
-  // Track list below - show artist tracks if multiple, otherwise show all filtered
   const artistTracks=filteredTracks.filter(t=>t.artist===ct.artist);
   const listTracks=artistTracks.length>1?artistTracks:filteredTracks;
-  let h=`<div class="list-header" style="position:sticky;top:0;background:#0a0a0a;z-index:5"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
-  h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">♫</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:#666">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
+  let h=`<div class="list-header" style="position:sticky;top:0;background:var(--bg);z-index:5"><span></span><span>Name</span><span>Artist</span><span>Genre</span><span></span><span>Time</span></div>`;
+  h+=listTracks.map(t=>`<div class="list-row${currentTrack?.id===t.id?" playing":""}${t.id===ct.id?" playing":""}" onclick="playTrack('${t.id}')" ondblclick="openTagModal('${t.id}')"><div class="art">${t.cover?`<img src="${t.cover}" loading="lazy">`:`<div class="no-art">\u266B</div>`}</div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div><div class="genre" style="font-size:11px;color:var(--text-tertiary)">${esc(t.genre)}</div><div class="flags-cell">${miniBadges(t.flags)}</div><div class="duration">${formatTime(t.duration)}</div></div>`).join("");
   document.getElementById("cfList").innerHTML=h;
 }
 
-function cfSelect(i){
-  cfIndex=i;
-  document.getElementById("cfSlider").value=i;
-  document.getElementById("cfSliderLabel").textContent=`${i+1} / ${cfTracksCached.length}`;
-  cfRenderCards();
-  cfUpdateInfo();
-  if(cfTracksCached[i])playTrack(cfTracksCached[i].id);
-}
+function cfSelect(i){cfIndex=i;document.getElementById("cfSlider").value=i;document.getElementById("cfSliderLabel").textContent=`${i+1} / ${cfTracksCached.length}`;cfRenderCards();cfUpdateInfo();if(cfTracksCached[i])playTrack(cfTracksCached[i].id)}
+function cfSliderChange(val){cfIndex=parseInt(val);document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracksCached.length}`;cfRenderCards();cfUpdateInfo()}
 
-function cfSliderChange(val){
-  cfIndex=parseInt(val);
-  document.getElementById("cfSliderLabel").textContent=`${cfIndex+1} / ${cfTracksCached.length}`;
-  cfRenderCards();
-  cfUpdateInfo();
-}
-
-// Keyboard nav for coverflow
 document.addEventListener("keydown",e=>{
-  if(currentView!=="coverflow")return;
-  if(!cfTracksCached.length)return;
+  if(currentView!=="coverflow")return;if(!cfTracksCached.length)return;
   if(e.key==="ArrowLeft"){cfIndex=Math.max(0,cfIndex-1);cfSliderChange(cfIndex);e.preventDefault()}
   if(e.key==="ArrowRight"){cfIndex=Math.min(cfTracksCached.length-1,cfIndex+1);cfSliderChange(cfIndex);e.preventDefault()}
   if(e.key==="Enter"&&cfTracksCached[cfIndex]){playTrack(cfTracksCached[cfIndex].id)}
 });
 
-// Horizontal scroll filter bar with mouse wheel
 document.getElementById("filterBar").addEventListener("wheel",e=>{
   if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){e.preventDefault();e.currentTarget.scrollLeft+=e.deltaY}
 },{passive:false});
@@ -545,7 +561,6 @@ async function quickGenre(id,genre){
   const t=allTracks.find(t=>t.id===id);if(t)t.genre=genre;buildFilters();updateStats();
 }
 
-// Tag modal
 function openTagModal(id){
   const t=allTracks.find(t=>t.id===id);if(!t)return;
   editingTrackId=id;editCustomTags=[...(t.custom_tags||[])];
@@ -556,7 +571,7 @@ function openTagModal(id){
   renderEditTags();document.getElementById("tagModal").classList.add("active");
 }
 function closeTagModal(){document.getElementById("tagModal").classList.remove("active")}
-function renderEditTags(){document.getElementById("editTags").innerHTML=editCustomTags.map((t,i)=>`<div class="tag-pill">${esc(t)} <span class="remove" onclick="removeCustomTag(${i})">×</span></div>`).join("")}
+function renderEditTags(){document.getElementById("editTags").innerHTML=editCustomTags.map((t,i)=>`<div class="tag-pill">${esc(t)} <span class="remove" onclick="removeCustomTag(${i})">\u00d7</span></div>`).join("")}
 function addCustomTag(){const v=document.getElementById("newTagInput").value.trim();if(v&&!editCustomTags.includes(v)){editCustomTags.push(v);renderEditTags()}document.getElementById("newTagInput").value=""}
 function removeCustomTag(i){editCustomTags.splice(i,1);renderEditTags()}
 
@@ -575,7 +590,6 @@ async function spotifyLookup(){
   if(data.genre){document.getElementById("editGenre").value=data.genre}else{alert("No genre found on Spotify")}
 }
 
-// Spotify auto-tag (batch)
 async function autoTagGenres(){
   const untagged=allTracks.filter(t=>!t.genre&&t.artist!=="Unknown").slice(0,50);
   if(!untagged.length){alert("No untagged tracks with known artists");return}
@@ -597,7 +611,6 @@ async function autoTagGenres(){
   buildFilters();applyFilters();updateStats();
 }
 
-// Player
 function playTrack(id){
   const t=allTracks.find(t=>t.id===id);if(!t)return;currentTrack=t;
   audioEl.src=`${API}/audio?path=${encodeURIComponent(t.path)}`;audioEl.play();isPlaying=true;
@@ -612,16 +625,14 @@ function tickPlayer(){const c=audioEl.currentTime,d=audioEl.duration||1;document
 function seekPlayer(e){const r=document.getElementById("playerProgress").getBoundingClientRect();audioEl.currentTime=(e.clientX-r.left)/r.width*audioEl.duration}
 audioEl.addEventListener("ended",()=>{isPlaying=false;updatePlayerBtn();if(currentTrack){const i=filteredTracks.findIndex(t=>t.id===currentTrack.id);if(i>=0&&i<filteredTracks.length-1)playTrack(filteredTracks[i+1].id)}});
 
-// Playlists
 let activeSidebarId=null;
 async function loadPlaylists(){
   const res=await fetch(`${API}/playlists`);const data=await res.json();
   const el=document.getElementById("playlistsList");
-  el.innerHTML=data.playlists.map(p=>`<div class="pl-item${activeSidebarId==='pl-'+p.id?' active':''}" data-sb="pl-${p.id}" onclick="sbSelect(this);loadPlaylist('${p.id}')"><span class="pl-icon">♪</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
+  el.innerHTML=data.playlists.map(p=>`<div class="pl-item${activeSidebarId==='pl-'+p.id?' active':''}" data-sb="pl-${p.id}" onclick="sbSelect(this);loadPlaylist('${p.id}')"><span class="pl-icon">\u266A</span>${esc(p.name)}<span class="pl-count">${p.count}</span></div>`).join("");
 }
 async function loadPlaylist(pid){
-  currentPlaylistId=pid;
-  activeSidebarId='pl-'+pid;
+  currentPlaylistId=pid;activeSidebarId='pl-'+pid;
   const res=await fetch(`${API}/playlists/${pid}`);const data=await res.json();
   filteredTracks=data.tracks;cfIndex=0;cfBuilt=false;render();toggleSidebar();
 }
@@ -632,8 +643,8 @@ function createPlaylist(){
 function showAddToPlaylist(){
   fetch(`${API}/playlists`).then(r=>r.json()).then(data=>{
     document.getElementById("plModalList").innerHTML=data.playlists.map(p=>
-      `<div class="pl-modal-item" onclick="addTrackToPlaylist('${p.id}')"><span class="pl-icon">♪</span><span class="pl-name">${esc(p.name)}</span><span class="pl-count">${p.count} tracks</span></div>`
-    ).join("")||"<p style='color:#555;font-size:13px;padding:12px'>No playlists yet — create one below</p>";
+      `<div class="pl-modal-item" onclick="addTrackToPlaylist('${p.id}')"><span class="pl-icon">\u266A</span><span class="pl-name">${esc(p.name)}</span><span class="pl-count">${p.count} tracks</span></div>`
+    ).join("")||"<p style='color:var(--text-tertiary);font-size:13px;padding:12px'>No playlists yet</p>";
     document.getElementById("plModal").classList.add("active");
   });
 }
@@ -647,41 +658,32 @@ async function createPlaylistAndAdd(){
   const name=prompt("New playlist name:");if(!name)return;
   const res=await fetch(`${API}/playlists`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
   const pl=await res.json();
-  if(currentTrack){
-    await fetch(`${API}/playlists/${pl.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({add_track:currentTrack.id})});
-  }
+  if(currentTrack){await fetch(`${API}/playlists/${pl.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({add_track:currentTrack.id})})}
   closePlModal();loadPlaylists();
 }
 
-// Serato
 async function loadSeratoCrates(){
   try{
     const res=await fetch(`${API}/serato/crates`);const data=await res.json();
-    document.getElementById("seratoCrates").innerHTML=data.crates.map(c=>`<div class="pl-item" onclick="importSeratoCrate('${esc(c.path)}','${esc(c.name)}')"><span class="pl-icon">⎔</span>${esc(c.name)}<span class="pl-count">${c.count}</span></div>`).join("")||"<div style='color:#444;font-size:11px;padding:8px'>No crates found</div>";
+    document.getElementById("seratoCrates").innerHTML=data.crates.map(c=>`<div class="pl-item" onclick="importSeratoCrate('${esc(c.path)}','${esc(c.name)}')"><span class="pl-icon">\u2394</span>${esc(c.name)}<span class="pl-count">${c.count}</span></div>`).join("")||"<div style='color:var(--text-tertiary);font-size:11px;padding:10px'>No crates found</div>";
   }catch(e){}
 }
 async function importSeratoCrate(path,name){
   const res=await fetch(`${API}/serato/crates/import`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path,name})});
   const data=await res.json();
-  alert(`Imported "${data.name}" — ${data.matched}/${data.total} tracks matched`);
+  alert(`Imported "${data.name}" \u2014 ${data.matched}/${data.total} tracks matched`);
   loadPlaylists();
 }
 
 function goToCurrentInCoverflow(){
   if(!currentTrack)return;
-  // If not in coverflow, switch to it
   if(currentView!=="coverflow"){
-    // Make sure we're showing all tracks
-    if(!filteredTracks.includes(currentTrack)){
-      filteredTracks=allTracks;
-    }
+    if(!filteredTracks.includes(currentTrack))filteredTracks=allTracks;
     cfBuilt=false;
     const cfTracks=filteredTracks.filter(t=>t.cover);
     const idx=cfTracks.findIndex(t=>t.id===currentTrack.id);
-    cfIndex=idx>=0?idx:0;
-    setView("coverflow");
+    cfIndex=idx>=0?idx:0;setView("coverflow");
   }else{
-    // Already in coverflow, just jump
     const idx=cfTracksCached.findIndex(t=>t.id===currentTrack.id);
     if(idx>=0){cfIndex=idx;cfSliderChange(cfIndex)}
   }
@@ -690,6 +692,7 @@ function goToCurrentInCoverflow(){
 function formatTime(s){if(!s||isNaN(s))return"0:00";const m=Math.floor(s/60);const sec=Math.floor(s%60);return`${m}:${sec.toString().padStart(2,"0")}`}
 function esc(s){if(!s)return"";const d=document.createElement("div");d.textContent=s;return d.innerHTML}
 
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');
 init();
 </script>
 

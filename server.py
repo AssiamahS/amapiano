@@ -239,6 +239,21 @@ def index():
     return send_from_directory("public", "index.html")
 
 
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("public", "manifest.json", mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def service_worker():
+    return send_from_directory("public", "sw.js", mimetype="application/javascript")
+
+
+@app.route("/logo.png")
+def logo():
+    return send_from_directory("public", "logo.png")
+
+
 @app.route("/downloads")
 def downloads_page():
     return """<!DOCTYPE html>
@@ -816,11 +831,12 @@ def _spotify_embed_info(spotify_url):
             entity = data["props"]["pageProps"]["state"]["data"]["entity"]
             name = entity["name"]
             artists = ", ".join(a["name"] for a in entity.get("artists", []))
-            return {"name": name, "artists": artists}
+            duration_ms = entity.get("duration", {}).get("milliseconds", 0) or entity.get("duration_ms", 0)
+            return {"name": name, "artists": artists, "duration_s": duration_ms / 1000 if duration_ms else 0}
         # Fallback: regex
         m3 = _re.search(r'"name":"([^"]+)".*?"artists":\[.*?"name":"([^"]+)"', html)
         if m3:
-            return {"name": m3.group(1), "artists": m3.group(2)}
+            return {"name": m3.group(1), "artists": m3.group(2), "duration_s": 0}
     except Exception as e:
         print(f"[embed] Error getting info for {spotify_url}: {e}")
     return None
@@ -877,11 +893,31 @@ def _scrape_spotify_track_urls(playlist_url):
 
 
 def _download_spotify_track_via_ytdlp(track_url, output_dir):
-    """Download a Spotify track by looking up metadata via embed, then downloading from YouTube."""
+    """Download a Spotify track by looking up metadata via embed, then downloading from YouTube.
+    Verifies duration to reject garbage results (podcasts, reaction vids, etc)."""
     info = _spotify_embed_info(track_url)
     if not info:
         return None, f"Could not get track info for {track_url}"
     search_query = f"{info['artists']} - {info['name']}"
+    expected_dur = info.get("duration_s", 0)
+
+    # Pre-check: get YouTube result duration BEFORE downloading
+    if expected_dur > 0:
+        try:
+            check = subprocess.run(
+                ["yt-dlp", "--print", "duration", "--no-playlist",
+                 f"ytsearch1:{search_query} audio"],
+                capture_output=True, text=True, timeout=30
+            )
+            yt_dur = float(check.stdout.strip() or 0)
+            # Reject if YouTube result is >2x or <0.3x the expected duration
+            if yt_dur > 0 and (yt_dur > expected_dur * 2 or yt_dur < expected_dur * 0.3):
+                msg = f"Duration mismatch: expected {expected_dur:.0f}s, got {yt_dur:.0f}s — skipping"
+                print(f"[yt-dlp] REJECTED {search_query}: {msg}", flush=True)
+                return None, msg
+        except Exception:
+            pass  # proceed anyway if check fails
+
     output_template = str(output_dir / f"{info['artists']} - {info['name']}.%(ext)s")
     result = subprocess.run(
         ["yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
@@ -890,7 +926,7 @@ def _download_spotify_track_via_ytdlp(track_url, output_dir):
         capture_output=True, text=True, timeout=120
     )
     if result.returncode == 0:
-        print(f"[yt-dlp] Downloaded: {search_query}", flush=True)
+        print(f"[yt-dlp] Downloaded: {search_query} (expected {expected_dur:.0f}s)", flush=True)
     else:
         print(f"[yt-dlp] Failed: {search_query} — {result.stderr[:200]}", flush=True)
     return result, None
@@ -927,7 +963,9 @@ def _run_download(download_id, url, playlist_name):
                 # Fallback: try yt-dlp with playlist URL directly
                 result = subprocess.run(
                     ["yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
-                     "-o", str(output_dir / "%(uploader)s - %(title)s.%(ext)s"),
+                     # Prefer real artist/title from ID3 tags, fall back to title only
+                     "-o", str(output_dir / "%(artist,creator,uploader)s - %(track,title)s.%(ext)s"),
+                     "--embed-metadata", "--parse-metadata", "title:%(title)s",
                      "--yes-playlist", url],
                     capture_output=True, text=True, timeout=1200
                 )
@@ -945,10 +983,12 @@ def _run_download(download_id, url, playlist_name):
             print(f"[spotify-single] done, rc={result.returncode}", flush=True)
         else:
             # Use yt-dlp for SoundCloud, YouTube, etc
+            # Try real artist/track fields from metadata, fall back to title if missing
             result = subprocess.run(
                 ["yt-dlp", "-x", "--audio-format", "mp3",
                  "--audio-quality", "0",
-                 "-o", str(output_dir / "%(uploader)s - %(title)s.%(ext)s"),
+                 "-o", str(output_dir / "%(artist,creator,uploader)s - %(track,title)s.%(ext)s"),
+                 "--embed-metadata",
                  "--no-playlist" if "/track" in url else "--yes-playlist",
                  url],
                 capture_output=True, text=True, timeout=900
@@ -1066,7 +1106,19 @@ def start_download():
     if not name:
         name = _fetch_playlist_name(url)
     if not name:
-        name = "Downloads"
+        # Last resort: use the uploader/channel from URL, not a timestamp
+        try:
+            r = subprocess.run(
+                ["yt-dlp", "--print", "uploader", "-I", "1", url],
+                capture_output=True, text=True, timeout=10
+            )
+            uploader = r.stdout.strip().split("\n")[0]
+            if uploader and uploader != "NA":
+                name = f"{uploader} tracks"
+        except Exception:
+            pass
+    if not name:
+        name = "Unsorted"
 
     if not url:
         return jsonify({"error": "URL required"}), 400
