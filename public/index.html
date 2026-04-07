@@ -190,10 +190,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
 .player .play-btn:hover{transform:scale(1.08);background:var(--accent-hover)}
 .player .play-btn:active{transform:scale(.95)}
 .player .play-btn svg{fill:white;width:14px;height:14px}
-.player .progress{flex:1;height:4px;background:var(--bg-elevated);border-radius:2px;cursor:pointer;position:relative;overflow:hidden}
-.player .progress .bar{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .1s linear;position:relative}
-.player .progress .bar::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
-.player .progress:hover .bar::after{opacity:1}
+.player .waveform-wrap{flex:1;height:40px;cursor:pointer;position:relative;border-radius:4px;overflow:hidden;background:var(--bg-elevated)}
+.player .waveform-wrap canvas{width:100%;height:100%;display:block}
+.player .waveform-wrap .wf-playhead{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;z-index:2;box-shadow:0 0 6px rgba(255,255,255,.4);transition:none}
+.player .waveform-wrap .wf-hover{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.25);pointer-events:none;z-index:1;display:none}
+.player .waveform-wrap:hover .wf-hover{display:block}
 .player .time{font-size:11px;color:var(--text-tertiary);font-family:var(--mono);min-width:85px;text-align:center;letter-spacing:-.3px}
 .player .add-to-pl{padding:5px 12px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:10px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;font-family:var(--font);font-weight:500;transition:all .2s}
 .player .add-to-pl:hover{border-color:var(--accent);color:var(--accent)}
@@ -317,7 +318,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:h
     <svg id="pPauseIcon" viewBox="0 0 24 24" style="display:none"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
   </button>
   <span class="time" id="playerTime">0:00 / 0:00</span>
-  <div class="progress" id="playerProgress" onclick="seekPlayer(event)"><div class="bar" id="playerBar"></div></div>
+  <div class="waveform-wrap" id="waveformWrap" onclick="seekPlayer(event)" onmousemove="wfHover(event)" onmouseleave="wfHoverHide()">
+    <canvas id="waveformCanvas"></canvas>
+    <div class="wf-playhead" id="wfPlayhead" style="left:0"></div>
+    <div class="wf-hover" id="wfHoverLine"></div>
+  </div>
   <button class="add-to-pl" onclick="showAddToPlaylist()">+ Playlist</button>
 </div>
 
@@ -634,11 +639,85 @@ function playTrack(id){
   document.getElementById("playerTitle").textContent=t.title;document.getElementById("playerArtist").textContent=t.artist;
   document.getElementById("playerArt").innerHTML=t.cover?`<img src="${t.cover}">`:"";
   updatePlayerBtn();render();if(animId)cancelAnimationFrame(animId);tickPlayer();
+  loadWaveform(t.id,t.path);
 }
 function togglePlayerPlay(){if(isPlaying){audioEl.pause();isPlaying=false}else{audioEl.play();isPlaying=true}updatePlayerBtn()}
 function updatePlayerBtn(){document.getElementById("pPlayIcon").style.display=isPlaying?"none":"block";document.getElementById("pPauseIcon").style.display=isPlaying?"block":"none"}
-function tickPlayer(){const c=audioEl.currentTime,d=audioEl.duration||1;document.getElementById("playerBar").style.width=(c/d*100)+"%";document.getElementById("playerTime").textContent=`${formatTime(c)} / ${formatTime(d)}`;animId=requestAnimationFrame(tickPlayer)}
-function seekPlayer(e){const r=document.getElementById("playerProgress").getBoundingClientRect();audioEl.currentTime=(e.clientX-r.left)/r.width*audioEl.duration}
+/* ═══ WAVEFORM ═══ */
+const wfCache={};
+let wfData=null,wfCtx=null,wfCanvas=null,wfAudioCtx=null;
+function getAudioCtx(){if(!wfAudioCtx)wfAudioCtx=new(window.AudioContext||window.webkitAudioContext)();return wfAudioCtx}
+function computeWaveform(audioBuffer,bars){
+  const ch=audioBuffer.getChannelData(0);
+  const step=Math.floor(ch.length/bars);
+  const peaks=new Float32Array(bars);
+  for(let i=0;i<bars;i++){
+    let sum=0;
+    const off=i*step;
+    for(let j=0;j<step;j++)sum+=Math.abs(ch[off+j]);
+    peaks[i]=sum/step;
+  }
+  const max=Math.max(...peaks)||1;
+  for(let i=0;i<bars;i++)peaks[i]=peaks[i]/max;
+  return peaks;
+}
+async function loadWaveform(trackId,path){
+  if(wfCache[trackId]){wfData=wfCache[trackId];drawWaveform();return}
+  wfData=null;drawWaveform();
+  try{
+    const resp=await fetch(`${API}/audio/full?path=${encodeURIComponent(path)}`);
+    const buf=await resp.arrayBuffer();
+    const actx=getAudioCtx();
+    const decoded=await actx.decodeAudioData(buf);
+    const bars=Math.min(800,wfCanvas?wfCanvas.width:800);
+    wfData=computeWaveform(decoded,bars);
+    wfCache[trackId]=wfData;
+    drawWaveform();
+  }catch(e){console.warn("Waveform decode failed:",e);wfData=null}
+}
+function drawWaveform(){
+  if(!wfCanvas)wfCanvas=document.getElementById("waveformCanvas");
+  if(!wfCtx)wfCtx=wfCanvas.getContext("2d");
+  const wrap=document.getElementById("waveformWrap");
+  const dpr=window.devicePixelRatio||1;
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  wfCanvas.width=w*dpr;wfCanvas.height=h*dpr;
+  wfCtx.scale(dpr,dpr);
+  wfCtx.clearRect(0,0,w,h);
+  const progress=audioEl.duration?(audioEl.currentTime/audioEl.duration):0;
+  const playX=progress*w;
+  if(!wfData){
+    // fallback: simple progress bar
+    wfCtx.fillStyle='#ff5500';
+    wfCtx.fillRect(0,h/2-1,playX,2);
+    wfCtx.fillStyle='#333';
+    wfCtx.fillRect(playX,h/2-1,w-playX,2);
+    wfCtx.setTransform(1,0,0,1,0,0);
+    return;
+  }
+  const bars=wfData.length;
+  const barW=w/bars;
+  const mid=h/2;
+  const maxH=h*0.9;
+  for(let i=0;i<bars;i++){
+    const x=i*barW;
+    const bh=Math.max(1,wfData[i]*maxH/2);
+    wfCtx.fillStyle=x<playX?'#ff5500':'#333';
+    wfCtx.fillRect(x,mid-bh,Math.max(1,barW-0.5),bh*2);
+  }
+  wfCtx.setTransform(1,0,0,1,0,0);
+}
+function tickPlayer(){
+  const c=audioEl.currentTime,d=audioEl.duration||1;
+  const pct=c/d;
+  document.getElementById("wfPlayhead").style.left=(pct*100)+"%";
+  document.getElementById("playerTime").textContent=`${formatTime(c)} / ${formatTime(d)}`;
+  drawWaveform();
+  animId=requestAnimationFrame(tickPlayer);
+}
+function seekPlayer(e){const r=document.getElementById("waveformWrap").getBoundingClientRect();audioEl.currentTime=(e.clientX-r.left)/r.width*(audioEl.duration||0)}
+function wfHover(e){const r=document.getElementById("waveformWrap").getBoundingClientRect();document.getElementById("wfHoverLine").style.left=(e.clientX-r.left)+"px"}
+function wfHoverHide(){document.getElementById("wfHoverLine").style.display=""}
 audioEl.addEventListener("ended",()=>{isPlaying=false;updatePlayerBtn();if(currentTrack){const i=filteredTracks.findIndex(t=>t.id===currentTrack.id);if(i>=0&&i<filteredTracks.length-1)playTrack(filteredTracks[i+1].id)}});
 
 let activeSidebarId=null;

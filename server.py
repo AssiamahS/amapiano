@@ -520,6 +520,15 @@ def serve_audio():
     return send_file(filepath)
 
 
+@app.route("/api/audio/full")
+def serve_audio_full():
+    """Serve complete audio file for Web Audio API waveform decoding (no range requests)."""
+    filepath = request.args.get("path", "")
+    if not filepath or not os.path.exists(filepath):
+        return "Not found", 404
+    return send_file(filepath, conditional=False)
+
+
 @app.route("/api/stats")
 def stats():
     db = load_db()
