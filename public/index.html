@@ -634,12 +634,13 @@ async function autoTagGenres(){
 
 function playTrack(id){
   const t=allTracks.find(t=>t.id===id);if(!t)return;currentTrack=t;
-  audioEl.src=`${API}/audio?path=${encodeURIComponent(t.path)}`;audioEl.play();isPlaying=true;
   document.getElementById("player").classList.add("active");
   document.getElementById("playerTitle").textContent=t.title;document.getElementById("playerArtist").textContent=t.artist;
   document.getElementById("playerArt").innerHTML=t.cover?`<img src="${t.cover}">`:"";
+  audioEl.src=`${API}/audio?path=${encodeURIComponent(t.path)}`;
+  audioEl.play().catch(()=>{});isPlaying=true;
   updatePlayerBtn();render();if(animId)cancelAnimationFrame(animId);tickPlayer();
-  loadWaveform(t.id,t.path);
+  loadWaveform(t.id,t.path).catch(()=>{});
 }
 function togglePlayerPlay(){if(isPlaying){audioEl.pause();isPlaying=false}else{audioEl.play();isPlaying=true}updatePlayerBtn()}
 function updatePlayerBtn(){document.getElementById("pPlayIcon").style.display=isPlaying?"none":"block";document.getElementById("pPauseIcon").style.display=isPlaying?"block":"none"}
@@ -713,14 +714,15 @@ async function loadWaveform(trackId,path){
   wfData=null;drawWaveform();
   try{
     const resp=await fetch(`${API}/audio/full?path=${encodeURIComponent(path)}`);
+    if(!resp.ok)return;
     const buf=await resp.arrayBuffer();
     const actx=getAudioCtx();
-    const decoded=await actx.decodeAudioData(buf);
+    const decoded=await actx.decodeAudioData(buf.slice(0));
     const bars=Math.min(800,wfCanvas?wfCanvas.width:800);
     wfData=await computeWaveform(decoded,bars);
     wfCache[trackId]=wfData;
     drawWaveform();
-  }catch(e){console.warn("Waveform decode failed:",e);wfData=null}
+  }catch(e){console.warn("Waveform:",e);wfData=null}
 }
 function drawWaveform(){
   if(!wfCanvas)wfCanvas=document.getElementById("waveformCanvas");
