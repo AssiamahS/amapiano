@@ -4,3 +4,4 @@ covers/
 uploads/
 library.json
 *.pyc
+.claude/worktrees/
